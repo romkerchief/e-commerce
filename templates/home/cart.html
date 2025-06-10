@@ -1,0 +1,173 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+{% block style %}
+    <style>
+        
+        h1,h2,h3,h4,h5,h6{
+            color:hsl(0, 0%, 30%);
+        }
+
+        .box-element{
+            box-shadow:hsl(0, 0%, 80%) 0 0 16px;
+            background-color: #fff;
+            border-radius: 4px;
+            padding: 10px;
+        }
+
+        .thumbnail{
+            width: 100%;
+            height: 200px;
+            -webkit-box-shadow: -1px -3px 5px -2px rgba(214,214,214,1);
+            -moz-box-shadow: -1px -3px 5px -2px rgba(214,214,214,1);
+            box-shadow: -1px -3px 5px -2px rgba(214,214,214,1);
+        }
+
+        td input{
+            width: 40px;
+            height: 30px;
+            padding: 5px;
+        }
+
+        .cart-info{
+            display: flex;
+            flex-wrap: wrap;
+            text-align: center;
+        }
+
+
+        .quantity{
+            display: inline-block;
+            font-weight: 700;
+            padding-right:10px;
+
+
+        }
+
+        .chg-quantity{
+            width: 12px;
+            cursor: pointer;
+            display: block;
+            margin-top: 5px;
+            transition:.1s;
+        }
+
+        .chg-quantity:hover{
+            opacity: .6;
+        }
+
+
+        .hidden{
+            display: none!important;
+        }
+
+    </style>
+{% endblock style %}
+    
+
+{% block content %}
+    <section class="under-nav">
+        <div class="container bg-light pt-4 pb-4">
+            <a class="btn btn-outline-primary mb-4" href="{% url 'homey:product' %}"><i class="fas fa-long-arrow-alt-left"></i> Back Shopping</a>
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="box-element">
+                        <div class="grid-cover mt-4 pb-4">
+                            <div class="grid-child my-auto"><h5>Items: <strong id="quantity-item">{{order.get_cart_items}}</strong></h5></div>
+                            <div class="grid-child mx-auto my-auto"><h5>Total: <strong>Rp {{order.get_cart_totals|floatformat:2|intcomma}}</strong></h5></div>
+                            <div id="alerts" class="hidden mt-2 mb-2">
+                                <p>Anda Harus Log In Agar Dapat Memasukkan Barang Kedalam Keranjang. <a href="{% url 'customer_login' %}">Ketuk Disini Untuk Login</a></p>
+                            </div>
+                            <div class="grid-child ml-auto my-auto">
+                                <!-- Button trigger modal -->
+                                <!-- <a class="btn checkout btn-outline-danger" href="{% url 'homey:checkout' %}">Checkout</a> -->
+                                <button type="button" class="btn checkout btn-outline-primary" data-toggle="modal" data-target="#exampleModal">
+                                    Checkout
+                                </button>
+                            </div>
+                        </div>
+                        <!-- Modal -->
+                        <div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+                            <div class="modal-dialog  modal-dialog-centered">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                <h5 class="modal-title" id="exampleModalLabel">Mohon Maaf</h5>
+                                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                                </div>
+                                <div class="modal-body">
+                                <p>
+                                    Checkout saat ini belum bisa digunakan karena web sedang dalam pengembangan :(
+                                </p>
+                                </div>
+                                <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                                </div>
+                            </div>
+                            </div>
+                        </div>
+                    </div>
+                    <br>
+                    <table class="table shadow text-center" id="table-product">
+                        <thead class="thead bg-blue">
+                            <tr>
+                                <th width="300px" scope="col">Product</th>
+                                <th width="300px" scope="col">Price</th>
+                                <th width="300px" scope="col">Quantity</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in items %}
+                                <tr>
+                                    <td class="cart-info" style="vertical-align: middle;">
+                                        {% if item.product.main_image %}
+                                            <img width="80px" src="{{ item.product.main_image.url }}" alt="{{ item.product.name }}">
+                                        {% elif item.product.imageThumbnail and item.product.imageThumbnail != '/static/empty.png' %}
+                                            <img width="80px" src="{{ item.product.imageThumbnail }}" alt="{{ item.product.name }}">
+                                        {% else %}
+                                            <img width="80px" src="{% static 'images/empty.png' %}" alt="No image">
+                                        {% endif %}
+                                        <p class="pt-2 pl-2 mr-auto">{{item.product.name}}</p>
+                                    </td>
+                                    <td style="vertical-align: middle;">{{item.product.price|floatformat:2|intcomma}}</td>
+                                    <td style="vertical-align: middle;" class="td-quantity" width="100px">
+                                        <p class="quantity">{{ item.quantity }}</p>
+                                        <div class="quantity">
+                                            <img data-product='{{item.product.id}}' data-action='add' class="chg-quantity update-cart" src="{% static 'arrow-up.png' %}">
+
+                                            <img data-product='{{item.product.id}}' data-action='remove' class="chg-quantity update-cart" src="{% static 'arrow-down.png' %}">
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </section>
+{% endblock content %}
+{% block script %}
+    
+    <script type="text/javascript">
+    var product = document.getElementById('quantity-item').textContent
+    console.log(product)
+
+    if(product=='0'){
+        var x = document.getElementsByClassName('checkout')
+        // Iterate through the retrieved elements and add the necessary class names.
+        for(var i = 0; i < x.length; i++){
+            x[i].classList.add('hidden');
+            console.log(x[i].className);
+        }
+    }
+    if(user == 'AnonymousUser'){
+        document.getElementById('alerts').classList.remove('hidden')
+        document.getElementById('table-product').classList.add('hidden')
+    }
+    </script>
+
+{% endblock script %}
+
+    

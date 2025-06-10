@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block style %}
+<style>
+    /* Hide navbar and footer for verification page */
+    nav.navbar, footer.section-footer {
+        display: none;
+    }
+    
+    /* Center verification content */
+    .verification-wrapper {
+        display: flex;
+        min-height: 100vh;
+        align-items: center;
+        justify-content: center;
+        background: #f8f9fa;
+    }
+    
+    .verification-box {
+        background: white;
+        padding: 2rem;
+        border-radius: 10px;
+        box-shadow: 0 0 15px rgba(0,0,0,0.1);
+        width: 100%;
+        max-width: 400px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="verification-wrapper">
+    <div class="verification-box">
+        <h2 class="text-center mb-4">Verify Your Email</h2>
+        
+        {% if messages %}
+        <div class="alert alert-{% if message.tags %}{{ message.tags }}{% endif %}">
+            {% for message in messages %}
+            {{ message }}
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <form method="POST">
+            {% csrf_token %}
+            <div class="form-group">
+                <input type="text" 
+                       name="code" 
+                       class="form-control form-control-lg"
+                       placeholder="Enter 6-digit code"
+                       required>
+            </div>
+            <button type="submit" class="btn btn-primary btn-block">
+                Verify
+            </button>
+        </form>
+
+        <div class="text-center mt-3">
+            <a href="{% url 'resend_verification' %}" class="text-muted">
+                Resend Code
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block script %}
+<script>
+    // Hide header/footer completely
+    document.querySelector('nav').style.display = 'none';
+    document.querySelector('footer').style.display = 'none';
+</script>
+{% endblock %}

@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<section class="under-nav">
+    <div class="container mt-4">
+        <header class="mb-4">
+            <h2 class="card-title">Staff Dashboard</h2>
+        </header>
+
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        <p>{{ greeting }}</p>
+
+        <div class="list-group">
+            {# Conditional links based on division can go here #}
+            {% if profile and profile.division and profile.division.name == "SDM" or user.is_superuser %}
+                <a href="{% url 'staff_register' %}" class="list-group-item list-group-item-action">
+                    Register New Staff Member
+                </a>
+            {% endif %}
+
+            <a href="{% url 'staff_all_orders' %}" class="list-group-item list-group-item-action">
+                View All Orders
+            </a>
+            <a href="#" class="list-group-item list-group-item-action disabled" tabindex="-1" aria-disabled="true">Manage Products (Coming Soon)</a>
+            <a href="#" class="list-group-item list-group-item-action disabled" tabindex="-1" aria-disabled="true">User Management (Coming Soon)</a>
+        </div>
+
+    </div>
+</section>
+{% endblock content %}

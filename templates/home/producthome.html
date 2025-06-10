@@ -1,0 +1,240 @@
+{% extends "base.html" %}
+{% load humanize %}
+{% load static %}
+{% block style %}
+<style>
+	.title-product{
+		font-size:1.1rem;
+        font-weight: 700;
+		color: black;
+        font-family: 'Roboto', sans-serif;
+	}
+
+	.price-product{
+		font-size: 1rem;
+        font-weight: 600;
+
+	}
+</style>
+{% endblock style %}
+{% block content %}
+    <!-- ========================= SECTION PAGETOP ========================= -->
+    <section class="section-pagetop bg under-nav ">
+        <div class="container">
+            <h2 class="title-page">Category products</h2>
+            <nav>
+            <ol class="breadcrumb text-white">
+                <li class="breadcrumb-item" aria-current="page"><a href="{% url 'homey:index' %}">Home</a></li>
+                {% if active %}
+                <li class="breadcrumb-item" aria-current="page"><a href="{% url 'homey:product' %}">Products</a></li>
+                <li class="breadcrumb-item active" aria-current="page">{{active}}</li>
+                {% else %}
+                <li class="breadcrumb-item active" aria-current="page">Products</li>
+                {% endif %}
+            </ol>  
+            </nav>
+        </div> <!-- container //  -->
+    </section>
+    <!-- ========================= SECTION INTRO END// ========================= -->
+    
+
+    <!-- ========================= SECTION CONTENT ========================= -->
+    <section class="section-content padding-y">
+    <div class="container">
+
+    <div class="row">
+        <aside class="col-md-3 mt-4">
+            <form method="GET">
+                <div class="card">
+                    <article class="filter-group">
+                        <div class="card-header d-flex flex-column">
+                            <a href="#" data-toggle="collapse" data-target="#collapse_1" aria-expanded="false" class="">
+                                <i class="icon-control fa fa-chevron-down"></i>
+                                <h6 class="title">Category Products</h6>
+                            </a>
+                        </div>
+                        <div class="filter-content collapse in" id="collapse_1" style="">
+                            <div class="card-body">
+                                {% for category in categories %}
+                                    <label class="custom-control custom-checkbox">
+                                        <input type="radio" name="category" value="{{category.id}}" class="custom-control-input">
+                                        <div class="custom-control-label">{{category}}</div>
+                                    </label>
+                                {% endfor %} 
+                            </div> <!-- card-body.// -->
+                        </div>
+                    </article> <!-- filter-group  .// -->
+                </div> <!-- card.// -->
+
+                <div class="card">
+                    <article class="filter-group">
+                        <div class="card-header d-flex flex-column">
+                            <a href="#" data-toggle="collapse" data-target="#collapse_2" aria-expanded="false" class="">
+                                <i class="icon-control fa fa-chevron-down"></i>
+                                <h6 class="title">More Filter</h6>
+                            </a>
+                        </div>
+                        <div class="filter-content collapse in" id="collapse_2" style="">
+                            <div class="card-body">
+                                <label class="custom-control custom-checkbox">
+                                    <input type="radio" name="more-filter" value="-upload_time" class="custom-control-input">
+                                    <div class="custom-control-label">Terbaru</div>
+                                </label>
+                                <label class="custom-control custom-checkbox">
+                                    <input type="radio" name="more-filter" value="-price" class="custom-control-input">
+                                    <div class="custom-control-label">Termahal</div>
+                                </label>
+                                <label class="custom-control custom-checkbox">
+                                    <input type="radio" name="more-filter" value="price" class="custom-control-input">
+                                    <div class="custom-control-label">Termurah</div>
+                                </label>
+                            </div> <!-- card-body.// -->
+                        </div>
+                    </article> <!-- filter-group  .// -->
+                </div> <!-- card.// -->
+                <button type="submit" class="btn btn-primary mt-4">Filter</button>
+            </form>
+        </aside> <!-- col.// -->
+    <main class="col-md-9 mt-4">
+
+    <div class="row">
+        <!--<div class="col-md-4">
+            <figure class="card card-product-grid">
+                <div class="img-wrap"> 
+                    <span class="badge badge-danger"> NEW </span>
+                    <img src="images/items/1.jpg">
+                    <a class="btn-overlay" href="#"><i class="fa fa-search-plus"></i> Quick view</a>
+                </div>
+                <figcaption class="info-wrap">
+                    <div class="fix-height">
+                        <a href="#" class="title">Great item name goes here</a>
+                        <div class="price-wrap mt-2">
+                            <span class="price">$1280</span>
+                            <del class="price-old">$1980</del>
+                        </div>
+                    </div>
+                    <a href="#" class="btn btn-block btn-primary">Add to cart </a>
+                </figcaption>
+            </figure>
+        </div> --><!-- col.// -->
+        
+        
+            
+        {% for product in product_list %}
+            <div class="col-md-4 col-sm-6 col-6 p-1">
+                <figure class="card card-product-grid" style="height: 400px;">
+                    <div class="img-wrap img-product">
+                        <a href="{% url 'homey:detail' product.slug %}">
+                            {% if product.main_image %}
+                                <img src="{{ product.main_image.url }}">
+                            {% elif product.imageThumbnail and product.imageThumbnail != '/static/empty.png' %}
+                                <img src="{{ product.imageThumbnail }}">
+                            {% else %}
+                                <img src="{% static 'images/empty.png' %}" >
+                            {% endif %}
+                        </a>
+                        <a class="btn-overlay" href="{% url 'homey:detail' product.slug %}"><i class="fa fa-search-plus"></i> Quick view</a>
+                    </div> <!-- img-wrap.// -->
+                    <figcaption class="info-wrap text-center ">
+                        <div class="fix-height">
+                            <a href="{% url 'homey:detail' product.slug %}" class="title title-product text-decoration-none">{{product.name}}</a>
+                            {% if product.seller and product.seller.profile and product.seller.profile.seller_specific_profile and product.seller.profile.seller_specific_profile.store_name %}										<p class="text-muted small mb-1">
+                                Sold by: <a href="{% url 'homey:store_detail' product.seller.profile.seller_specific_profile.slug %}" class="text-decoration-none">{{ product.seller.profile.seller_specific_profile.store_name }}</a>								</p>
+							{% endif %}
+                            <div class="price-wrap mt-2">
+                                <span class="price price-product">Rp {{product.price|floatformat:2|intcomma}}</span>
+                            </div> <!-- price-wrap.// -->
+                        </div>
+                        {% if is_user %}
+                        <!-- Jika user adalah anonymous maka -->
+                            <button type="button" class="btn btn-block btn-primary mt-2" data-toggle="modal" data-target="#exampleModal">
+                                Add To Cart
+                            </button>
+                        {% else %}
+                        <!-- Lain Jika user sudah log in -->
+                            <a data-action='add' data-product='{{product.id}}' href="" class="btn btn-block btn-primary update-cart mt-2">Add to cart </a>  
+                        {% endif %}
+                    </figcaption>
+                </figure>
+            </div> <!-- col.// -->
+        {% endfor %}
+    </div> <!-- row end.// -->
+    <!-- Modal -->
+        <div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="exampleModalLabel">Log In Dibutuhkan</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                Agar Bisa Memasukkan Item Keranjang Anda Harus Login
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                <a href="{% url 'customer_login' %}" class="btn btn-primary">Log In</a>
+            </div>
+            </div>
+        </div>
+        </div>
+    
+    {% if path %} <!-- Jika Ada Filter Maka... -->
+        <nav class="mt-4" aria-label="Page navigation sample">
+        {% if is_paginated %}
+        <ul class="pagination">
+            
+        {% if page_obj.has_previous %}
+            <li class="page-item"><a class="page-link" href="{{path}}&page={{page_obj.previous_page_number}}">Previous</a></li>    
+        {% else %}
+            <li class="page-item disabled"><a class="page-link" href="#">Previous</a></li>
+        {% endif %}    
+        {% for i in paginator.page_range %}
+            <li class="page-item"><a class="page-link" href="{{path}}&page={{i}}">{{i}}</a></li>
+        {% endfor %}
+        {% if page_obj.has_next %}
+            <li class="page-item"><a class="page-link" href="{{path}}&page={{page_obj.next_page_number}}">Next</a></li>    
+        {% else %}
+            <li class="page-item disabled"><a class="page-link" href="#">Next</a></li>
+        {% endif %} 
+        </ul>
+        {% endif %}
+        </nav>
+    {% else %}<!-- LAIN Jika Tidak Ada Filter Maka... -->
+    <nav class="mt-4" aria-label="Page navigation sample">
+        {% if is_paginated %}
+        <ul class="pagination">
+            
+        {% if page_obj.has_previous %}
+            <li class="page-item"><a class="page-link" href="{% url 'homey:product' %}?page={{page_obj.previous_page_number}}">Previous</a></li>    
+        {% else %}
+            <li class="page-item disabled"><a class="page-link" href="#">Previous</a></li>
+        {% endif %}    
+        {% for i in paginator.page_range %}
+            <li class="page-item"><a class="page-link" href="{% url 'homey:product' %}?page={{i}}">{{i}}</a></li>
+        {% endfor %}
+        {% if page_obj.has_next %}
+            <li class="page-item"><a class="page-link" href="{% url 'homey:product' %}?page={{page_obj.next_page_number}}">Next</a></li>    
+        {% else %}
+            <li class="page-item disabled"><a class="page-link" href="#">Next</a></li>
+        {% endif %} 
+        </ul>
+        {% endif %}
+        </nav>
+    {% endif %}
+        
+    </main> <!-- col.// -->
+
+    </div>
+
+    </div> <!-- container .//  -->
+    </section>
+    <!-- ========================= SECTION CONTENT END// ========================= -->
+{% endblock content %}
+
+{% block script %}
+    
+{% endblock script %}
+    
+    

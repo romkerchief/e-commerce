@@ -1,0 +1,71 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<section class="under-nav">
+    <div class="container mt-4">
+        <header class="mb-4">
+            <h2 class="card-title">{{ action }} Product</h2>
+        </header>
+
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        <form method="POST" enctype="multipart/form-data">
+            {% csrf_token %}
+            
+            <h5>Product Details</h5>
+            {# Render non-field errors for product_form #}
+            {% if product_form.non_field_errors %}
+                <div class="alert alert-danger">
+                    {% for error in product_form.non_field_errors %}
+                        <p>{{ error }}</p>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            {# Render product_form fields #}
+            {% for field in product_form %}
+                <div class="form-group mb-3">
+                    {{ field.label_tag }}
+                    {{ field }}
+                    {% if field.help_text %}<small class="form-text text-muted">{{ field.help_text }}</small>{% endif %}
+                    {% for error in field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                </div>
+            {% endfor %}
+
+            <hr>
+            <h5>Product Images (Gallery)</h5>
+            {{ image_formset.management_form }}
+            {% for image_form in image_formset %}
+                <div class="form-group mb-3 border p-3 rounded">
+                    {% if image_form.instance.pk and image_form.instance.image %}
+                        <p>Current image: <a href="{{ image_form.instance.image.url }}" target="_blank">{{ image_form.instance.image.name }}</a></p>
+                        <img src="{{ image_form.instance.image.url }}" alt="Product image" style="max-height: 100px; margin-bottom: 10px;">
+                    {% endif %}
+                    {{ image_form.image.label_tag }}
+                    {{ image_form.image }}
+                    {% for error in image_form.image.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                    {% if image_form.instance.pk %}
+                        <div class="mt-2">
+                            {{ image_form.DELETE.label_tag }} {{ image_form.DELETE }}
+                        </div>
+                    {% endif %}
+                    {{ image_form.id }} {# Hidden field for formset to track instance #}
+                </div>
+            {% endfor %}
+
+            <button type="submit" class="btn btn-primary">{{ action }} Product</button>
+            <a href="{% url 'seller_dashboard' %}" class="btn btn-secondary">Cancel</a>
+        </form>
+    </div>
+</section>
+{% endblock content %}

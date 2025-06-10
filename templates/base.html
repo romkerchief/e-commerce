@@ -1,0 +1,156 @@
+{% load static %}
+{% load humanize %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">	
+<link href="https://fonts.googleapis.com/css2?family=Orelega+One&family=Roboto&family=Viga&display=swap" rel="stylesheet">
+	{% include "snippets/styles.html" %}
+	<link href='https://unpkg.com/boxicons@2.1.2/css/boxicons.min.css' rel='stylesheet'>
+	<link rel="stylesheet" href="{% static "ui.css" %}">
+	<link rel="stylesheet" href="{% static "style.css" %}">
+	<style>
+		.hidden {
+            display: none!important;
+        }
+		.navbar-brand {
+			font-family: 'Viga', sans-serif;
+		}
+	</style>
+	{% block style %}
+	
+	{% endblock style %}
+	<script type="text/javascript">
+		var user = '{{request.user}}'
+		function getCookie(name) {
+		    var cookieValue = null;
+		    if (document.cookie && document.cookie !== '') {
+		        var cookies = document.cookie.split(';');
+		        for (var i = 0; i < cookies.length; i++) {
+		            var cookie = cookies[i].trim();
+		            // Does this cookie string begin with the name we want?
+		            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+		                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+		                break;
+		            }
+		        }
+		    }
+		    return cookieValue;
+		}
+		var csrftoken = getCookie('csrftoken');
+	</script>
+
+	<title>E-Commerce</title>
+</head>
+<body>	
+
+	<!-- NavBar -->
+	<nav class="navbar shadow fixed-top navbar-expand-sm navbar-light bg-light">
+		<div class="container">
+	  		<h2><a class="navbar-brand" style="font-size: 1.5rem;" href="{% url 'homey:index' %}">byeah Shop</a></h2>
+	  		<a href="{% url 'homey:product' %}" class="text-decoration-none mr-auto" style="color:black;font-size: 1.2rem;font-weight: 600;">Products</a>
+	  		<button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNavAltMarkup" aria-controls="navbarNavAltMarkup" aria-expanded="false" aria-label="Toggle navigation">
+	    		<span class="navbar-toggler-icon"></span>
+	  		</button>
+			<div class="collapse navbar-collapse" id="navbarNavAltMarkup">
+			    <div class="navbar-nav ml-auto">
+					{% if user.is_authenticated %}
+						{# Link to View Profile page #}
+						<a href='{% url "view_profile" %}' style="width:110px; box-sizing:border-box;" class="btn btn-outline-primary my-2 my-sm-0 mr-2">My Account</a>
+						{% if user.profile and user.profile.user_level and user.profile.user_level.name == "Penjual" %}
+						<a href='{% url "seller_dashboard" %}' style="width:160px; box-sizing:border-box;" class="btn btn-success my-2 my-sm-0 mr-2">Seller Dashboard</a>
+						{% endif %}
+						<a id="logout-btn" href='{% url "logout" %}' style="width:85px; box-sizing:border-box;" class="btn btn-outline-primary my-2 my-sm-0 mr-2">Log Out</a>
+					{% else %} {# This is the link for non-authenticated users #}
+						<a id="register-btn" href='{% url 'register' %}' style="width:80px; box-sizing:border-box;" class="btn btn-outline-primary my-2 my-sm-0 mr-2">Register</a>
+						<a id="login-btn" href='{% url "customer_login" %}' style="width:75px; box-sizing:border-box;" class="btn btn-outline-primary my-2 my-sm-0 mr-2">Log In</a>
+					{% endif %}
+	  				<a href="{% url 'homey:cart' %}" class="tombol btn btn-outline-primary my-2 my-sm-0">
+	  					<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-cart2" viewBox="0 0 16 16">
+	  						<path d="M0 2.5A.5.5 0 0 1 .5 2H2a.5.5 0 0 1 .485.379L2.89 4H14.5a.5.5 0 0 1 .485.621l-1.5 6A.5.5 0 0 1 13 11H4a.5.5 0 0 1-.485-.379L1.61 3H.5a.5.5 0 0 1-.5-.5zM3.14 5l1.25 5h8.22l1.25-5H3.14zM5 13a1 1 0 1 0 0 2 1 1 0 0 0 0-2zm-2 1a2 2 0 1 1 4 0 2 2 0 0 1-4 0zm9-1a1 1 0 1 0 0 2 1 1 0 0 0 0-2zm-2 1a2 2 0 1 1 4 0 2 2 0 0 1-4 0z"/>
+						</svg>
+	  				</a>
+            </div>
+
+		 		</div>
+	  		</div>
+	  	</div>
+	</nav>
+	{% block content %}
+		
+	{% endblock content %}
+	<footer class="section-footer section-content">
+		<div class="container mt-3">
+			<section class="footer-top padding-y">
+				<div class="row">
+					<aside class="col-md col-6 mt-2">
+						<h6 class="title">Shop</h6>
+						<ul class="list-unstyled">
+							<li> <a href="https://api.whatsapp.com/send?phone=62895358299310">Contact us</a></li>
+							<li> <a href="{% url 'homey:product' %}?more-filter=price">Termurah</a></li>
+							<li> <a href="{% url 'homey:product' %}?more-filter=-price">Termahal</a></li>
+						</ul>
+					</aside>
+					<aside class="col-md col-6 mt-2">
+						<h6 class="title">Account</h6>
+						<ul class="list-unstyled">
+							<li> <a href="{% url 'customer_login' %}"> User Login </a></li>
+							<li> <a href="{% url 'register' %}"> User register </a></li>
+							<li> <a href="{% url 'seller_register' %}">Become a seller</a></li>
+							{% if user.is_authenticated %}
+							<li> <a href="{% url 'customer_order_history' %}"> Order History </a></li>
+							<li> <a href="{% url 'edit_profile' %}"> Edit Profile </a></li>
+							{% endif %}
+						</ul>
+					</aside>
+					<aside class="col-md mt-2">
+						<h6 class="title">Social</h6>
+						<ul class="list-unstyled">
+							<li><a href="#"> <i class="fab fa-facebook"></i> Facebook </a></li>
+							<li><a href="{{URL}}"> <i class="fab fa-whatsapp"></i> Whatsapp </a></li>
+							<li><a href="#"> <i class="fab fa-instagram"></i> Instagram </a></li>
+						</ul>
+					</aside>
+				</div> <!-- row.// -->
+			</section>	<!-- footer-top.// -->
+
+			<section class="footer-bottom border-top row">
+				<div class="col-md-4">
+					<p class="text-muted"> &copy 2025 byeah | romdhoniroyhan21@gmail.com</p>
+				</div>
+				<div class="col-md-8 text-md-center">
+					<span  class="px-2">+62 895-3582-99310 | Kenari Blok D3</span>
+				</div>
+			</section>
+		</div><!-- //container -->
+	</footer>
+	<!-- ======================= FOOTER END // ======================= -->
+	
+</body>
+<script src="https://kit.fontawesome.com/47a5254e53.js" crossorigin="anonymous"></script>
+<script type="text/javascript" src="{% static "js/cart.js" %}"></script>
+<script type="text/javascript">
+	var user = '{{user}}'
+	console.log(user)
+	if(user != 'AnonymousUser'){
+		document.getElementById('register-btn').classList.add('hidden')
+		document.getElementById('login-btn').classList.add('hidden')
+		console.log('bruh1')
+		document.getElementById('logout-btn').classList.remove('hidden')
+	}
+
+	const queryString = window.location.search;
+	console.log(queryString);	
+
+
+</script>
+
+
+
+{% block script %}
+	
+{% endblock script %}
+{% include "snippets/scripts.html" %}
+</html>

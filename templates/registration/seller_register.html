@@ -1,0 +1,122 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<section class="under-nav">
+    <div class="container d-flex justify-content-center">
+        <div class="card col-sm-10 col-md-12">
+            <article class="card-body">
+                <header class="mb-4">
+                    <h4 class="card-title">Become a Seller - Sign Up</h4>
+                </header>
+
+                <!-- Error Messages -->
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert {% if message.tags == 'error' %}alert-danger{% elif message.tags == 'success' %}alert-success{% else %}alert-info{% endif %}">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                {% endif %}
+
+                <!-- MAIN FORM -->
+                <form method="POST">
+                    {% csrf_token %}
+
+                    {# Username #}
+                    <div class="form-row">
+                        <div class="col-sm-8 form-group">
+                            <label for="{{ form.username.id_for_label }}">{{ form.username.label }}</label>
+                            {{ form.username }}
+                            {% for error in form.username.errors %}
+                                <div class="invalid-feedback d-block">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    {# Email #}
+                    <div class="form-row">
+                        <div class="col-sm-8 form-group">
+                            <label for="{{ form.email.id_for_label }}">{{ form.email.label }}</label>
+                            {{ form.email }}
+                            {% for error in form.email.errors %}
+                                <div class="invalid-feedback d-block">{{ error }}</div>
+                            {% endfor %}
+                            <small class="form-text text-muted">We'll never share your email with anyone else.</small>
+                        </div>
+                    </div>
+
+                    {# nama toko #}
+                    <div class="form-row">
+                        <div class="col-sm-8 form-group">
+                            <label for="{{ form.store_name.id_for_label }}">{{ form.store_name.label }}</label>
+                            {{ form.store_name }}
+                            {% for error in form.store_name.errors %}
+                                <div class="invalid-feedback d-block">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    {# alamat toko #}
+                    <div class="form-row">
+                        <div class="col-sm-8 form-group">
+                            <label for="{{ form.alamat.id_for_label }}">{{ form.alamat.label }}</label>
+                            {{ form.alamat }}
+                            {% for error in form.alamat.errors %}
+                                <div class="invalid-feedback d-block">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    {# nomor telepon #}
+                    <div class="form-row">
+                        <div class="col-sm-8 form-group">
+                            <label for="{{ form.phone_num.id_for_label }}">{{ form.phone_num.label }}</label>
+                            {{ form.phone_num }}
+                            {% for error in form.phone_num.errors %}
+                                <div class="invalid-feedback d-block">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    {# Full Name #}
+                    <div class="form-row">
+                        <div class="col-sm-8 form-group">
+                            <label for="{{ form.full_name.id_for_label }}">{{ form.full_name.label }}</label>
+                            {{ form.full_name }}
+                            {% for error in form.full_name.errors %}
+                                <div class="invalid-feedback d-block">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    {# Password Fields from UserCreationForm #}
+                    <div class="form-row">
+                        <div class="form-group col-md-6">
+                            <label for="{{ form.password1.id_for_label }}">{{ form.password1.label }}</label>
+                            {{ form.password1 }}
+                            {% for error in form.password1.errors %}
+                                <div class="invalid-feedback d-block">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        <div class="form-group col-md-6">
+                            <label for="{{ form.password2.id_for_label }}">{{ form.password2.label }}</label>
+                            {{ form.password2 }}
+                            {% for error in form.password2.errors %}
+                                <div class="invalid-feedback d-block">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <div class="form-group mt-3">
+                        <button type="submit" class="btn btn-primary btn-block">Register as Seller</button>
+                    </div>
+                </form>
+                <hr>
+                <p class="text-center">Already have an account? <a href="{% url 'login' %}">Log In</a></p>
+                <p class="text-center">Want to sign up as a buyer? <a href="{% url 'register' %}">Buyer Sign Up</a></p>
+            </article>
+        </div>
+    </div>
+</section>
+{% endblock content %}

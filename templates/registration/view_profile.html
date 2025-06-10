@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<section class="under-nav">
+    <div class="container d-flex justify-content-center">
+        <div class="card col-sm-10 col-md-12">
+            <article class="card-body">
+                <header class="mb-4">
+                    <h4 class="card-title">User Profile</h4>
+                </header>
+
+                <!-- Messages -->
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert {% if message.tags %}alert-{{ message.tags }}{% else %}alert-info{% endif %}">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                {% endif %}
+
+                <div class="row mb-3">
+                    <div class="col-md-4"><strong>Username:</strong></div>
+                    <div class="col-md-8">{{ user_object.username }}</div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-4"><strong>Email:</strong></div>
+                    <div class="col-md-8">{{ user_object.email }} {% if profile.email_verified %}<span class="badge bg-success text-white">Verified</span>{% else %}<span class="badge bg-warning text-dark">Unverified</span>{% endif %}</div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-4"><strong>Full Name:</strong></div>
+                    <div class="col-md-8">{{ profile.full_name|default:"N/A" }}</div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-4"><strong>Address:</strong></div>
+                    <div class="col-md-8">{{ profile.alamat|default:"N/A" }}</div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-4"><strong>Phone Number:</strong></div>
+                    <div class="col-md-8">{{ profile.phone_num|default:"N/A" }}</div>
+                </div>
+
+                {# Display UserLevel, ValidStatus, Division if they exist #}
+                {% if profile.user_level %}
+                <div class="row mb-3">
+                    <div class="col-md-4"><strong>User Level:</strong></div>
+                    <div class="col-md-8">{{ profile.user_level.name }}</div>
+                </div>
+                {% endif %}
+
+                {% if profile.valid_status %}
+                <div class="row mb-3">
+                    <div class="col-md-4"><strong>Status:</strong></div>
+                    <div class="col-md-8">{{ profile.valid_status.name }}</div>
+                </div>
+                {% endif %}
+
+                {% if profile.division %}
+                <div class="row mb-3">
+                    <div class="col-md-4"><strong>Division:</strong></div>
+                    <div class="col-md-8">{{ profile.division.name }}</div>
+                </div>
+                {% endif %}
+
+                <hr>
+                <div class="text-center">
+                    <a href="{% url 'edit_profile' %}" class="btn btn-primary mr-2">Edit Profile</a>
+                    <a href="{% url 'homey:index' %}" class="btn btn-secondary">Back to Home</a>
+                </div>
+
+            </article>
+        </div>
+    </div>
+</section>
+{% endblock content %}

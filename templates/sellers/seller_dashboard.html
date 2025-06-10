@@ -1,0 +1,126 @@
+{% extends 'base.html' %}
+{% load static %}{% load humanize %}
+
+{% block content %}
+<section class="under-nav">
+    <div class="container mt-4">
+        <header class="mb-4">
+            {# We'll pass the store_name from the view later #}
+            {% if seller_profile and seller_profile.store_name %}
+                <h2 class="card-title">Seller Dashboard: {{ seller_profile.store_name }}</h2>
+            {% else %}
+                <h2 class="card-title">Seller Dashboard</h2>
+            {% endif %}
+        </header>
+
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        <div class="mb-3">
+            <a href="{% url 'homey:seller_product_create' %}" class="btn btn-primary">Add New Product</a>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header">
+                <h4>Your Products</h4>
+            </div>
+            <div class="card-body">
+                {% if products %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Image</th>
+                                    <th scope="col">Name</th>
+                                    <th scope="col">Price</th>
+                                    <th scope="col">Stock</th>
+                                    <th scope="col">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for product in products %}
+                                <tr>
+                                    <td>
+                                        {% if product.main_image %}
+                                            <img src="{{ product.main_image.url }}" alt="{{ product.name }} main image" style="width: 60px; height: auto; border-radius: 4px;">
+                                        {% elif product.imageThumbnail and product.imageThumbnail != '/static/empty.png' %}
+                                            <img src="{{ product.imageThumbnail }}" alt="{{ product.name }} thumbnail" style="width: 60px; height: auto; border-radius: 4px;">
+                                        {% else %}
+                                            <img src="{% static 'images/empty.png' %}" alt="No image available" style="width: 60px; height: auto; border-radius: 4px;">
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ product.name }}</td>
+                                    <td>Rp {{ product.price|floatformat:0|intcomma }}</td>
+                                    <td>{{ product.stock }}</td>
+                                    <td>
+                                        <a href="{% url 'homey:seller_product_update' product.pk %}" class="btn btn-sm btn-info">Edit</a>
+                                        <a href="{% url 'homey:seller_product_delete' product.pk %}" class="btn btn-sm btn-danger">Delete</a>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="5" class="text-center">
+                                        You haven't added any products yet. 
+                                        <a href="{% url 'homey:seller_product_create' %}">Add your first product!</a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <p>You haven't added any products yet. <a href="{% url 'homey:seller_product_create' %}">Add your first product!</a></p>
+                {% endif %}
+            </div>
+        </div>
+
+        <hr class="my-4">
+
+        <div class="card">
+            <div class="card-header">
+                <h4>Your Recent Sales</h4>
+            </div>
+            <div class="card-body">
+                {% if seller_order_items %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Order ID</th>
+                                    <th scope="col">Date</th>
+                                    <th scope="col">Customer</th>
+                                    <th scope="col">Product Sold</th>
+                                    <th scope="col">Quantity</th>
+                                    <th scope="col">Item Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in seller_order_items %}
+                                <tr>
+                                    <td><a href="{% url 'seller_order_detail' item.order.transaction_id %}">{{ item.order.transaction_id }}</a></td>
+                                    <td>{{ item.order.date_order|date:"d M Y, H:i" }}</td>
+                                    <td>{{ item.order.user.username|default:"Guest" }}</td>
+                                    <td>{{ item.product.name }}</td>
+                                    <td>{{ item.quantity }}</td>
+                                    <td>Rp {{ item.get_total|floatformat:0|intcomma }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <p>You have no sales yet.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock content %}

@@ -1,0 +1,119 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<section class="under-nav">
+    <div class="container d-flex justify-content-center">
+        <div class="card col-sm-10 col-md-12">
+            <article class="card-body">
+                <header class="mb-4">
+                    <h4 class="card-title">Edit Profile</h4>
+                </header>
+
+                <!-- Messages (e.g., success message after update) -->
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert {% if message.tags %}alert-{{ message.tags }}{% else %}alert-info{% endif %}">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                {% endif %}
+
+                <!-- MAIN FORM -->
+                <form method="POST">
+                    {% csrf_token %}
+
+                    {# Render non-field errors for profile_form #}
+                    {% if profile_form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            {% for error in profile_form.non_field_errors %}
+                                <p>{{ error }}</p>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+
+                    {# Render email field #}
+                    <div class="mb-3">
+                        <label for="{{ profile_form.email.id_for_label }}" class="form-label">{{ profile_form.email.label_tag }}</label>
+                        {{ profile_form.email }}
+                        {% if profile_form.email.help_text %}
+                            <small class="form-text text-muted">{{ profile_form.email.help_text }}</small>
+                        {% endif %}
+                        {% for error in profile_form.email.errors %}
+                            <div class="invalid-feedback d-block">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+
+                    {# Render full_name field #}
+                    <div class="mb-3">
+                        <label for="{{ profile_form.full_name.id_for_label }}" class="form-label">{{ profile_form.full_name.label_tag }}</label>
+                        {{ profile_form.full_name }}
+                        {% if profile_form.full_name.help_text %}
+                            <small class="form-text text-muted">{{ profile_form.full_name.help_text }}</small>
+                        {% endif %}
+                        {% for error in profile_form.full_name.errors %}
+                            <div class="invalid-feedback d-block">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+
+                    {# Render alamat field #}
+                    <div class="mb-3">
+                        <label for="{{ profile_form.alamat.id_for_label }}" class="form-label">{{ profile_form.alamat.label_tag }}</label>
+                        {{ profile_form.alamat }}
+                        {% if profile_form.alamat.help_text %}
+                            <small class="form-text text-muted">{{ profile_form.alamat.help_text }}</small>
+                        {% endif %}
+                        {% for error in profile_form.alamat.errors %}
+                            <div class="invalid-feedback d-block">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+
+                    {# Render phone_num field #}
+                    <div class="mb-3">
+                        <label for="{{ profile_form.phone_num.id_for_label }}" class="form-label">{{ profile_form.phone_num.label_tag }}</label>
+                        {{ profile_form.phone_num }}
+                        {% if profile_form.phone_num.help_text %}
+                            <small class="form-text text-muted">{{ profile_form.phone_num.help_text }}</small>
+                        {% endif %}
+                        {% for error in profile_form.phone_num.errors %}
+                            <div class="invalid-feedback d-block">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+
+                    {% if seller_form %}
+                        <hr>
+                        <h5>Store Details</h5>
+                        {# Render non-field errors for seller_form #}
+                        {% if seller_form.non_field_errors %}
+                            <div class="alert alert-danger">
+                                {% for error in seller_form.non_field_errors %}
+                                    <p>{{ error }}</p>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        {# Render store_name field #}
+                        <div class="mb-3">
+                            <label for="{{ seller_form.store_name.id_for_label }}" class="form-label">{{ seller_form.store_name.label_tag }}</label>
+                            {{ seller_form.store_name }}
+                            {% if seller_form.store_name.help_text %}
+                                <small class="form-text text-muted">{{ seller_form.store_name.help_text }}</small>
+                            {% endif %}
+                            {% for error in seller_form.store_name.errors %}
+                                <div class="invalid-feedback d-block">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+
+                    <div class="form-group mt-3">
+                        <button type="submit" class="btn btn-primary btn-block">Save Changes</button>
+                    </div>
+                </form>
+
+                <hr>
+                <p class="text-center"><a href="{% url 'password_change' %}">Change Password</a></p>
+                <p class="text-center"><a href="{% url 'view_profile' %}">Back to Profile</a></p>
+            </article>
+        </div>
+    </div>
+</section>
+{% endblock content %}

@@ -1,0 +1,98 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<section class="under-nav">
+    <div class="container d-flex justify-content-center">
+        <div class="card col-sm-10 col-md-12">
+            <article class="card-body">
+                <header class="mb-4">
+                    <h4 class="card-title">{{ form_title|default:"Register New Staff" }}</h4>
+                </header>
+
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert {% if message.tags == 'error' %}alert-danger{% elif message.tags == 'success' %}alert-success{% else %}alert-info{% endif %} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+
+                <form method="POST">
+                    {% csrf_token %}
+                    
+                    {# Username #}
+                    <div class="form-group mb-3">
+                        <label for="{{ form.username.id_for_label }}">{{ form.username.label }}</label>
+                        {{ form.username }}
+                        {% for error in form.username.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                    </div>
+
+                    {# Email #}
+                    <div class="form-group mb-3">
+                        <label for="{{ form.email.id_for_label }}">{{ form.email.label }}</label>
+                        {{ form.email }}
+                        {% for error in form.email.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                    </div>
+
+                    {# Full Name #}
+                    <div class="form-group mb-3">
+                        <label for="{{ form.full_name.id_for_label }}">{{ form.full_name.label }}</label>
+                        {{ form.full_name }}
+                        {% for error in form.full_name.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                    </div>
+                    
+                    {# Alamat #}
+                    <div class="form-group mb-3">
+                        <label for="{{ form.alamat.id_for_label }}">{{ form.alamat.label }}</label>
+                        {{ form.alamat }}
+                        {% for error in form.alamat.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                    </div>
+
+                    {# Phone Number #}
+                    <div class="form-group mb-3">
+                        <label for="{{ form.phone_num.id_for_label }}">{{ form.phone_num.label }}</label>
+                        {{ form.phone_num }}
+                        {% for error in form.phone_num.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                    </div>
+
+                    {# User Level #}
+                    <div class="form-group mb-3">
+                        <label for="{{ form.user_level.id_for_label }}">{{ form.user_level.label }}</label>
+                        {{ form.user_level }}
+                        {% for error in form.user_level.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                    </div>
+
+                    {# Division #}
+                    <div class="form-group mb-3">
+                        <label for="{{ form.division.id_for_label }}">{{ form.division.label }}</label>
+                        {{ form.division }}
+                        {% for error in form.division.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                    </div>
+
+                    {# Password Fields #}
+                    <div class="form-row">
+                        <div class="form-group col-md-6 mb-3">
+                            <label for="{{ form.password1.id_for_label }}">{{ form.password1.label }}</label>
+                            {{ form.password1 }}
+                            {% for error in form.password1.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                        </div>
+                        <div class="form-group col-md-6 mb-3">
+                            <label for="{{ form.password2.id_for_label }}">{{ form.password2.label }}</label>
+                            {{ form.password2 }}
+                            {% for error in form.password2.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                        </div>
+                    </div>
+
+                    <div class="form-group mt-3">
+                        <button type="submit" class="btn btn-primary btn-block">Register Staff</button>
+                    </div>
+                </form>
+            </article>
+        </div>
+    </div>
+</section>
+{% endblock content %}

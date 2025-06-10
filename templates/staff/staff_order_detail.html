@@ -1,0 +1,119 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block content %}
+<section class="under-nav">
+    <div class="container mt-4">
+        <header class="mb-4 d-flex justify-content-between align-items-center">
+            <h2 class="card-title">Order Details (Staff View): {{ order.transaction_id }}</h2>
+            <a href="{% url 'staff_all_orders' %}" class="btn btn-outline-secondary btn-sm">Back to All Orders</a>
+        </header>
+
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card mb-3">
+                    <div class="card-header">
+                        Order Information
+                    </div>
+                    <div class="card-body">
+                        <p><strong>Order ID:</strong> {{ order.transaction_id }}</p>
+                        <p><strong>Customer:</strong> {{ order.user.username|default:"Guest Customer" }} (<a href="#">View Customer</a>)</p> {# Link to customer management later #}
+                        <p><strong>Order Date:</strong> {{ order.date_order|date:"d M Y, H:i" }}</p>
+                        <p><strong>Order Status:</strong> {{ order.status.name|default:"N/A" }}</p>
+                        <p><strong>Total Amount:</strong> Rp {{ order.get_cart_totals|floatformat:0|intcomma }}</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card mb-3">
+                    <div class="card-header">
+                        Shipping Address
+                    </div>
+                    <div class="card-body">
+                        {% if shipping_address %}
+                            <p><strong>Email:</strong> {{ shipping_address.email|default:"N/A" }}</p>
+                            <p><strong>City:</strong> {{ shipping_address.kota|default:"N/A" }}</p>
+                            <p><strong>Address:</strong> {{ shipping_address.address|default:"N/A" }}</p>
+                        {% else %}
+                            <p>No shipping address was recorded for this order.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mt-4">
+            <div class="card-header">
+                <h4>Items in this Order</h4>
+            </div>
+            <div class="card-body">
+                {% if order_items %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Product</th>
+                                    <th scope="col">Seller</th>
+                                    <th scope="col">Quantity</th>
+                                    <th scope="col">Unit Price</th>
+                                    <th scope="col">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in order_items %}
+                                <tr>
+                                    <td>{{ item.product.name }}</td>
+                                    <td>{{ item.product.seller.username|default:"N/A" }}</td>
+                                    <td>{{ item.quantity }}</td>
+                                    <td>Rp {{ item.product.price|floatformat:0|intcomma }}</td>
+                                    <td>Rp {{ item.get_total|floatformat:0|intcomma }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <p>There are no items in this order.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5>Update Order Status</h5>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    {# Manually render the 'complete' field for better styling #}
+                    <div class="form-group"> {# This will now render a select dropdown for status #}
+                        {{ status_form.status.label_tag }}
+                        {{ status_form.status }}
+                        {% if status_form.status.help_text %}
+                            <small class="form-text text-muted">
+                                {{ status_form.status.help_text }}
+                            </label>
+                        {% endif %}
+                        {% for error in status_form.status.errors %}
+                            <div class="invalid-feedback d-block">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                    <button type="submit" class="btn btn-primary mt-3">Update Status</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock content %}
