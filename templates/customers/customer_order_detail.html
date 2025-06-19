@@ -30,7 +30,7 @@
                     <div class="card-body">
                         <p><strong>Order ID:</strong> {{ order.transaction_id }}</p>
                         <p><strong>Order Date:</strong> {{ order.date_order|date:"d M Y, H:i" }}</p>
-                        <p><strong>Order Status:</strong> {% if order.complete %}Completed{% else %}Pending{% endif %}</p>
+                        <p><strong>Order Status:</strong> {{ order.status.name|default:"N/A" }}</p>
                         <p><strong>Total Amount:</strong> Rp {{ order.get_cart_totals|floatformat:0|intcomma }}</p>
                     </div>
                 </div>

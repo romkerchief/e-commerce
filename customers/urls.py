@@ -1,9 +1,10 @@
 from django.urls import path,include
 from django.conf import settings
+from django.contrib.auth import views as auth_views # Import Django's auth views
 from django.conf.urls.static import static
 from .views import (
     registerPage, seller_register_page, loginPage, logoutPage,
-    verify_email, resend_verification, edit_profile, view_profile, customer_order_history_view, customer_order_detail_view, staff_register_view, staff_dashboard_view, staff_all_orders_view, staff_order_detail_view,
+    verify_email, resend_verification, edit_profile, view_profile, customer_order_history_view, customer_order_detail_view, staff_register_view, staff_dashboard_view, staff_all_orders_view, staff_order_detail_view, staff_user_list_view, staff_user_detail_view, staff_user_orders_view, staff_user_edit_view, # Ensure these are imported
     seller_dashboard_view, seller_order_detail_view
 )
 
@@ -24,4 +25,30 @@ urlpatterns = [
     path('staff/dashboard/', staff_dashboard_view, name='staff_dashboard'),
     path('staff/all-orders/', staff_all_orders_view, name='staff_all_orders'),
     path('staff/order-detail/<str:order_transaction_id>/', staff_order_detail_view, name='staff_order_detail'),
-] 
+    path('staff/users/<int:pk>/', staff_user_detail_view, name='staff_user_detail'),
+    path('staff/users/<int:user_id>/orders/', staff_user_orders_view, name='staff_user_orders'), # This pattern needs the view imported
+    path('staff/users/<int:pk>/edit/', staff_user_edit_view, name='staff_user_edit'),
+    path('staff/users/', staff_user_list_view, name='staff_user_list'), # This pattern needs the view imported
+
+    # Password Reset URLs
+    path('password_reset/',
+         auth_views.PasswordResetView.as_view(template_name='registration/password_reset_form.html'),
+         name='password_reset'),
+    path('password_reset/done/',
+         auth_views.PasswordResetDoneView.as_view(template_name='registration/password_reset_done.html'),
+         name='password_reset_done'),
+    path('reset/<uidb64>/<token>/',
+         auth_views.PasswordResetConfirmView.as_view(template_name='registration/password_reset_confirm.html'),
+         name='password_reset_confirm'),
+    path('reset/done/',
+         auth_views.PasswordResetCompleteView.as_view(template_name='registration/password_reset_complete.html'),
+         name='password_reset_complete'),
+
+    # Password Change URLs (already present in your edit_profile.html, but good to have standard names)
+    path('password_change/',
+         auth_views.PasswordChangeView.as_view(template_name='registration/password_change_form.html'),
+         name='password_change'),
+    path('password_change/done/',
+         auth_views.PasswordChangeDoneView.as_view(template_name='registration/password_change_done.html'),
+         name='password_change_done'),
+]

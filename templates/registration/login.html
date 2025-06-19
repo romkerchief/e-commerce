@@ -6,32 +6,47 @@
         <div class="container d-flex justify-content-center">
             <div class="card col-sm-8 col-md-10 col-lg-12" style="padding:0px;">
               <div class="card-body">
-              <h4 class="card-title mb-4">Log in</h4>
-              <form method="POST" action="{% url 'customer_login' %}">
-                  {% csrf_token %}
-                  <div class="form-group">
-                     <label>Username</label>
-                     {{form.username}}
-                  </div> <!-- form-group// -->
-                  <div class="form-group">
-                    <label>Password</label>
-                    {{form.password}}
-                  </div> <!-- form-group// --> 
-                  <div class="form-group"> 
-                    <label class="custom-control custom-checkbox"> <input type="checkbox" class="custom-control-input" checked=""> <div class="custom-control-label"> Remember </div> </label>
-                  </div> <!-- form-group form-check .// -->
-                  <div class="form-group">
-                      <button type="submit" class="btn btn-primary btn-block"> Login  </button>
-                  </div> <!-- form-group// -->
-                  <div class="form-group">
-                    <small style="color:red;">{{form.errors}}</small>
-                      {% for message in messages %}
-                          <small style="color:red;">{{message}}</small>
-                      {% endfor %}
-                        
-                  </div>    
-              </form>
-              <div class="card-footer text-center">Don't have an account? <a href="{% url 'register' %}">Sign up</a></div>
+                <h4 class="card-title mb-4">Log in</h4>
+
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+
+                {% if form.non_field_errors %}
+                    <div class="alert alert-danger">
+                        {% for error in form.non_field_errors %}
+                            <p>{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+
+                <form method="POST" action="{% url 'customer_login' %}">
+                    {% csrf_token %}
+                    <div class="form-group">
+                       <label for="{{ form.username.id_for_label }}">Username</label>
+                       {{form.username}}
+                       {% for error in form.username.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                    </div> <!-- form-group// -->
+                    <div class="form-group">
+                      <label for="{{ form.password.id_for_label }}">Password</label>
+                      {{form.password}}
+                      {% for error in form.password.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                    </div> <!-- form-group// --> 
+                    <div class="form-group mt-3">
+                        <button type="submit" class="btn btn-primary btn-block"> Login  </button>
+                    </div> <!-- form-group// -->
+                    <div class="form-group text-center mt-3">
+                      <a href="{% url 'password_reset' %}">Forgot password?</a>
+                    </div>
+                </form>
+                <div class="card-footer text-center">Don't have an account? <a href="{% url 'register' %}">Sign up</a></div>
               </div> <!-- card-body.// -->
               
             </div> <!-- card .// -->

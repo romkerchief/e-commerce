@@ -12,21 +12,24 @@
 
                 <!-- Error Messages -->
                 {% if messages %}
-                <div class="alert alert-danger">
                     {% for message in messages %}
-                    {{ message }}
+                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
                     {% endfor %}
-                </div>
                 {% endif %}
 
                 <!-- MAIN FORM -->
                 <form method="POST">
                     {% csrf_token %}
-                    <div class="form-row">
-                        <div class="col-sm-8 form-group">
-                            <label>Username</label>
-                            {{ form.username }}
-                        </div> 
+                    {# Username #}
+                    <div class="form-group mb-3">
+                        <label for="{{ form.username.id_for_label }}">{{ form.username.label }}</label>
+                        {{ form.username }}
+                        {% for error in form.username.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
                     </div>
 
                     <div class="mb-3">
@@ -62,23 +65,25 @@
                         {% endfor %}
                     </div>
 
-
-                    <div class="form-row">
-                        <div class="col-sm-8 form-group">
-                            <label>Email</label>
-                            {{ form.email }}
-                            <small class="form-text text-muted">We'll never share your email with anyone else.</small>
-                        </div>
+                    {# Email #}
+                    <div class="form-group mb-3">
+                        <label for="{{ form.email.id_for_label }}">{{ form.email.label }}</label>
+                        {{ form.email }}
+                        {% for error in form.email.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                        <small class="form-text text-muted">We'll never share your email with anyone else.</small>
                     </div>
 
+                    {# Password Fields #}
                     <div class="form-row">
-                        <div class="form-group col-md-6">
-                            <label>Create password</label>
+                        <div class="form-group col-md-6 mb-3">
+                            <label for="{{ form.password1.id_for_label }}">{{ form.password1.label }}</label>
                             {{ form.password1 }}
+                            {% for error in form.password1.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
                         </div>  
-                        <div class="form-group col-md-6">
-                            <label>Repeat password</label>
+                        <div class="form-group col-md-6 mb-3">
+                            <label for="{{ form.password2.id_for_label }}">{{ form.password2.label }}</label>
                             {{ form.password2 }}
+                            {% for error in form.password2.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
                         </div>   
                     </div>
 

@@ -31,7 +31,7 @@
                         <p><strong>Order ID:</strong> {{ order.transaction_id }}</p>
                         <p><strong>Order Date:</strong> {{ order.date_order|date:"d M Y, H:i" }}</p>
                         <p><strong>Customer:</strong> {{ order.user.username|default:"Guest Customer" }}</p>
-                        <p><strong>Order Status:</strong> {% if order.complete %}Completed{% else %}Pending{% endif %}</p>
+                        <p><strong>Order Status:</strong> {{ order.status.name|default:"N/A" }}</p>
                     </div>
                 </div>
             </div>

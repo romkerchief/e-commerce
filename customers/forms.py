@@ -235,3 +235,37 @@ class OrderStatusUpdateForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.fields['status'].queryset = OrderStatus.objects.all() # Populate choices
         self.fields['status'].help_text = "Select the new status for this order."
+
+class StaffUserBaseForm(forms.ModelForm):
+    """Form for staff to edit core User model fields."""
+    class Meta:
+        model = User
+        # Carefully select fields staff can edit. Password is handled separately.
+        # is_superuser should probably only be editable by other superusers.
+        fields = ['username', 'email', 'is_active', 'is_staff', 'is_superuser']
+        widgets = {
+            'username': forms.TextInput(attrs={'class': 'form-control mb-3', 'readonly': 'readonly'}), # Username often not editable
+            'email': forms.EmailInput(attrs={'class': 'form-control mb-3'}),
+            'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input ml-2'}),
+            'is_staff': forms.CheckboxInput(attrs={'class': 'form-check-input ml-2'}),
+            'is_superuser': forms.CheckboxInput(attrs={'class': 'form-check-input ml-2'}),
+        }
+        labels = {
+            'is_active': 'Is Active',
+            'is_staff': 'Is Staff User',
+            'is_superuser': 'Is Superuser',
+        }
+
+class StaffProfileEditForm(forms.ModelForm):
+    """Form for staff to edit Profile model fields."""
+    class Meta:
+        model = models.Profile
+        fields = ['full_name', 'alamat', 'phone_num', 'user_level', 'valid_status', 'division']
+        widgets = {
+            'full_name': forms.TextInput(attrs={'class': 'form-control mb-3'}),
+            'alamat': forms.Textarea(attrs={'class': 'form-control mb-3', 'rows': 3}),
+            'phone_num': forms.TextInput(attrs={'class': 'form-control mb-3'}),
+            'user_level': forms.Select(attrs={'class': 'form-control mb-3'}),
+            'valid_status': forms.Select(attrs={'class': 'form-control mb-3'}),
+            'division': forms.Select(attrs={'class': 'form-control mb-3'}),
+        }

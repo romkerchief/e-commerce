@@ -1,0 +1,88 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<section class="under-nav">
+    <div class="container mt-4">
+        <header class="mb-4 d-flex justify-content-between align-items-center">
+            <h2 class="card-title">Edit User: {{ user_obj.username }}</h2>
+            <a href="{% url 'staff_user_detail' user_obj.pk %}" class="btn btn-outline-secondary btn-sm">Back to User Details</a>
+        </header>
+
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        <div class="card">
+            <div class="card-body">
+                <form method="POST">
+                    {% csrf_token %}
+
+                    <h5>Account Information</h5>
+                    {# Render non-field errors for user_form #}
+                    {% if user_form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            {% for error in user_form.non_field_errors %}
+                                <p>{{ error }}</p>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                    {# Render user_form fields #}
+                    {% for field in user_form %}
+                        <div class="form-group mb-3">
+                            {{ field.label_tag }}
+                            {{ field }}
+                            {% if field.help_text %}<small class="form-text text-muted">{{ field.help_text }}</small>{% endif %}
+                            {% for error in field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                        </div>
+                    {% endfor %}
+
+                    <hr>
+
+                    <h5>Profile Information</h5>
+                     {# Render non-field errors for profile_form #}
+                    {% if profile_form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            {% for error in profile_form.non_field_errors %}
+                                <p>{{ error }}</p>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                    {# Render profile_form fields #}
+                    {% for field in profile_form %}
+                         <div class="form-group mb-3">
+                            {{ field.label_tag }}
+                            {{ field }}
+                            {% if field.help_text %}<small class="form-text text-muted">{{ field.help_text }}</small>{% endif %}
+                            {% for error in field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                        </div>
+                    {% endfor %}
+
+                    {# Add SellerProfile form fields here if needed #}
+                    {# Example (if you create StaffSellerProfileEditForm and pass it as 'seller_form'): #}
+                    {# {% if seller_form %} #}
+                    {# <hr> #}
+                    {# <h5>Seller Information</h5> #}
+                    {# {% if seller_form.non_field_errors %}<div class="alert alert-danger">...</div>{% endif %} #}
+                    {# {% for field in seller_form %} #}
+                    {# <div class="form-group mb-3">...</div> #}
+                    {# {% endfor %} #}
+                    {# {% endif %} #}
+
+                    <div class="form-group mt-4">
+                        <button type="submit" class="btn btn-primary mr-2">Save Changes</button>
+                        <a href="{% url 'staff_user_detail' user_obj.pk %}" class="btn btn-secondary">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock content %}

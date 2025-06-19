@@ -42,7 +42,7 @@
                                     <td>{{ order.date_order|date:"d M Y, H:i" }}</td>
                                     <td>{{ order.get_cart_items }}</td>
                                     <td>Rp {{ order.get_cart_totals|floatformat:0|intcomma }}</td>
-                                    <td>{% if order.complete %}Completed{% else %}Pending{% endif %}</td>
+                                    <td>{{ order.status.name|default:"N/A" }}</td>
                                     <td><a href="{% url 'customer_order_detail' order.transaction_id %}" class="btn btn-sm btn-info">View Details</a></td>
                                 </tr>
                                 {% endfor %}

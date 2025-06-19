@@ -29,7 +29,11 @@
                     </div>
                     <div class="card-body">
                         <p><strong>Order ID:</strong> {{ order.transaction_id }}</p>
-                        <p><strong>Customer:</strong> {{ order.user.username|default:"Guest Customer" }} (<a href="#">View Customer</a>)</p> {# Link to customer management later #}
+                        <p><strong>Customer:</strong> {{ order.user.username|default:"Guest Customer" }}
+                            {% if order.user %}
+                                (<a href="{% url 'staff_user_detail' order.user.pk %}">View Customer</a>)
+                            {% endif %}
+                        </p>
                         <p><strong>Order Date:</strong> {{ order.date_order|date:"d M Y, H:i" }}</p>
                         <p><strong>Order Status:</strong> {{ order.status.name|default:"N/A" }}</p>
                         <p><strong>Total Amount:</strong> Rp {{ order.get_cart_totals|floatformat:0|intcomma }}</p>
@@ -103,8 +107,7 @@
                         {{ status_form.status }}
                         {% if status_form.status.help_text %}
                             <small class="form-text text-muted">
-                                {{ status_form.status.help_text }}
-                            </label>
+                                {{ status_form.status.help_text }}</small>
                         {% endif %}
                         {% for error in status_form.status.errors %}
                             <div class="invalid-feedback d-block">{{ error }}</div>

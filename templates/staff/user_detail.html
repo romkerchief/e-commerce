@@ -1,0 +1,124 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<section class="under-nav">
+    <div class="container mt-4">
+        <header class="mb-4 d-flex justify-content-between align-items-center">
+            <h2 class="card-title">User Details: {{ user_obj.username }}</h2>
+            <a href="{% url 'staff_user_list' %}" class="btn btn-outline-secondary btn-sm">Back to All Users</a>
+        </header>
+
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title mb-3">Account Information</h5>
+                <div class="row mb-2">
+                    <div class="col-md-4"><strong>Username:</strong></div>
+                    <div class="col-md-8">{{ user_obj.username }}</div>
+                </div>
+                <div class="row mb-2">
+                    <div class="col-md-4"><strong>Email:</strong></div>
+                    <div class="col-md-8">{{ user_obj.email }} {% if user_obj.profile.email_verified %}<span class="badge bg-success text-white">Verified</span>{% else %}<span class="badge bg-warning text-dark">Unverified</span>{% endif %}</div>
+                </div>
+                <div class="row mb-2">
+                    <div class="col-md-4"><strong>Account Created:</strong></div>
+                    <div class="col-md-8">{{ user_obj.date_joined|date:"d M Y, H:i" }}</div>
+                </div>
+                <div class="row mb-2">
+                    <div class="col-md-4"><strong>Last Login:</strong></div>
+                    <div class="col-md-8">{{ user_obj.last_login|date:"d M Y, H:i"|default:"Never" }}</div>
+                </div>
+                <div class="row mb-2">
+                    <div class="col-md-4"><strong>Is Staff:</strong></div>
+                    <div class="col-md-8">{% if user_obj.is_staff %}Yes{% else %}No{% endif %}</div>
+                </div>
+                 <div class="row mb-2">
+                    <div class="col-md-4"><strong>Is Superuser:</strong></div>
+                    <div class="col-md-8">{% if user_obj.is_superuser %}Yes{% else %}No{% endif %}</div>
+                </div>
+
+                <h5 class="card-title mt-4 mb-3">Profile Information</h5>
+                {% if user_obj.profile %}
+                    <div class="row mb-2">
+                        <div class="col-md-4"><strong>Full Name:</strong></div>
+                        <div class="col-md-8">{{ user_obj.profile.full_name|default:"N/A" }}</div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-md-4"><strong>User Level:</strong></div>
+                        <div class="col-md-8">{{ user_obj.profile.user_level.name|default:"N/A" }}</div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-md-4"><strong>Valid Status:</strong></div>
+                        <div class="col-md-8">{{ user_obj.profile.valid_status.name|default:"N/A" }}</div>
+                    </div>
+                    {% if user_obj.profile.division %}
+                    <div class="row mb-2">
+                        <div class="col-md-4"><strong>Division:</strong></div>
+                        <div class="col-md-8">{{ user_obj.profile.division.name }}</div>
+                    </div>
+                    {% endif %}
+                     <div class="row mb-2">
+                        <div class="col-md-4"><strong>Address:</strong></div>
+                        <div class="col-md-8">{{ user_obj.profile.alamat|default:"N/A" }}</div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-md-4"><strong>Phone Number:</strong></div>
+                        <div class="col-md-8">{{ user_obj.profile.phone_num|default:"N/A" }}</div>
+                    </div>
+
+                    {% if user_obj.profile.seller_specific_profile %}
+                        <h5 class="card-title mt-4 mb-3">Seller Information</h5>
+                        <div class="row mb-2">
+                            <div class="col-md-4"><strong>Store Name:</strong></div>
+                            <div class="col-md-8">{{ user_obj.profile.seller_specific_profile.store_name|default:"N/A" }}</div>
+                        </div>
+                         <div class="row mb-2">
+                            <div class="col-md-4"><strong>Store Slug:</strong></div>
+                            <div class="col-md-8">{{ user_obj.profile.seller_specific_profile.slug|default:"N/A" }}</div>
+                        </div>
+                         {# Link to seller's public store page #}
+                        {% if user_obj.profile.seller_specific_profile.slug %}
+                        <div class="row mb-2">
+                            <div class="col-md-4"><strong>Public Store Page:</strong></div>
+                            <div class="col-md-8"><a href="{% url 'homey:store_detail' user_obj.profile.seller_specific_profile.slug %}" target="_blank">{{ user_obj.profile.seller_specific_profile.store_name|default:"Store" }}</a></div>
+                        </div>
+                        {% endif %}
+                    {% endif %}
+
+                {% else %}
+                    <div class="alert alert-warning" role="alert">
+                        No profile information found for this user.
+                    </div>
+                {% endif %}
+
+                <hr>
+                <div class="text-center">
+                    {# Link to user edit view - Restricted to SDM or Superusers #}
+                    {% if request.user.is_superuser or request.user.profile and request.user.profile.division and request.user.profile.division.name == "SDM" %}
+                        <a href="{% url 'staff_user_edit' user_obj.pk %}" class="btn btn-primary mr-2">Edit User</a>
+                    {% endif %}
+                    {# Link to user orders - Removed 'customers' namespace as it's not defined #}
+                    <a href="{% url 'staff_user_orders' user_obj.pk %}" class="btn btn-info mr-2">View Orders</a>
+                    {# Link to user products (if seller) later #}
+                    {% if user_obj.profile.user_level.name == "Penjual" %}
+                        <a href="#" class="btn btn-info mr-2 disabled">View Products</a>
+                    {% endif %}
+                    <a href="{% url 'staff_user_list' %}" class="btn btn-secondary">Back to List</a>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock content %}

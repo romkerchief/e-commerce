@@ -1,5 +1,5 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse # Import JsonResponse
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.core.mail import EmailMessage, send_mail
@@ -18,21 +18,21 @@ from functools import wraps
 import smtplib
 from .models import Profile, UserLevel, ValidStatus, SellerProfile, Division # type: ignore
 from .forms import FormSignUp,FormLogIn, ProfileUpdateForm, SellerSignUpForm, SellerProfileUpdateForm, StaffSignUpForm, OrderStatusUpdateForm # type: ignore
-from home.models import Product
+from home.models import Product, OrderStatus 
+from .forms import StaffUserBaseForm, StaffProfileEditForm
 
 def admin_or_hr_required(function):
     @wraps(function)
     def wrap(request, *args, **kwargs):
         if not request.user.is_authenticated:
             messages.error(request, "Please log in to access this page.")
-            return redirect('login') # Or your specific login URL name
+            return redirect('login')
 
         if request.user.is_superuser:
             return function(request, *args, **kwargs)
         
         try:
             profile = request.user.profile
-            # Assuming 'SDM' is the name of your HR/Human Resources division in the Division model
             if profile.division and profile.division.name == "SDM":
                 return function(request, *args, **kwargs)
             else:
@@ -40,7 +40,7 @@ def admin_or_hr_required(function):
                 return redirect('homey:index') # Redirect to homepage or a 'permission denied' page
         except Profile.DoesNotExist:
             messages.error(request, "User profile not found. Please complete your profile or contact support.")
-            return redirect('edit_profile') # Or homepage
+            return redirect('edit_profile')
         except AttributeError: # Handles if profile exists but division is None
             messages.error(request, "User profile is incomplete (division not set). You do not have permission to access this page.")
             return redirect('homey:index')
@@ -587,24 +587,30 @@ def seller_order_detail_view(request, order_transaction_id):
         }
         return render(request, 'sellers/seller_order_detail.html', context)
     except Order.DoesNotExist:
-        messages.error(request, "Order not found.")
+        messages.error(request, "Order not found or you do not have permission to view it.")
         return redirect('seller_dashboard')
     except Exception as e:
         messages.error(request, "An error occurred while fetching order details.")
-        print(f"Error in seller_order_detail_view: {str(e)}")
+        print(f"Error in seller_order_detail_view (Transaction ID: {order_transaction_id}, User: {request.user.username}): Type: {type(e).__name__}, Details: {e}")
         return redirect('seller_dashboard')
 
 @login_required
 def customer_order_history_view(request):
     try:
-        from home.models import Order
+        from home.models import Order, OrderStatus # Ensure OrderStatus is imported
+        
+        default_cart_status = OrderStatus.objects.filter(is_default=True).first()
+        
+        if not default_cart_status:
+            messages.error(request, "System configuration error: Default order status not set. Please contact support.")
+            print("CRITICAL: No default OrderStatus found in customer_order_history_view.")
+            orders = Order.objects.none() # Return an empty queryset to prevent further errors
+        else:
         # Fetch orders that are in a "final" state (e.g., Delivered, Cancelled)
         # or any status that isn't the default "cart" status.
-        default_cart_status = OrderStatus.objects.filter(is_default=True).first()
-        orders = Order.objects.filter(user=request.user).exclude(status=default_cart_status).order_by('-date_order')
+            orders = Order.objects.filter(user=request.user).exclude(status=default_cart_status).order_by('-date_order')
         # Alternatively, if you strictly want only 'is_final' statuses:
         # orders = Order.objects.filter(user=request.user, status__is_final=True).order_by('-date_order')
-
         context = {
             'orders': orders,
         }
@@ -618,7 +624,7 @@ def customer_order_history_view(request):
 @login_required
 def customer_order_detail_view(request, order_transaction_id):
     try:
-        from home.models import Order, OrderItem, ShippingAddress
+        from home.models import Order, OrderItem, ShippingAddress, OrderStatus # Import OrderStatus
         # Fetch the specific order, ensuring it belongs to the current user
         # and is not their active "Pending" cart.
         default_cart_status = OrderStatus.objects.filter(is_default=True).first()
@@ -644,3 +650,126 @@ def customer_order_detail_view(request, order_transaction_id):
         messages.error(request, "An error occurred while fetching order details.")
         print(f"Error in customer_order_detail_view: {str(e)}")
         return redirect('customer_order_history')
+
+@login_required
+@staff_member_required
+def staff_user_list_view(request):
+    """
+    Staff view to list all users with their profile information.
+    """
+    try:
+        # Fetch all users and prefetch their related profile to avoid N+1 queries
+        # Exclude staff users if you only want to manage customers/sellers here
+        # Or include all users if staff can manage other staff too
+        users_list = User.objects.select_related('profile__user_level', 'profile__valid_status', 'profile__division').order_by('username')
+
+        paginator = Paginator(users_list, 20) # Show 20 users per page
+        page_number = request.GET.get('page')
+        users = paginator.get_page(page_number)
+
+        context = {
+            'users': users,
+        }
+        return render(request, 'staff/user_list.html', context)
+    except Exception as e:
+        messages.error(request, f"An error occurred while fetching the user list: {str(e)}")
+        print(f"Error in staff_user_list_view: {str(e)}")
+        return redirect('staff_dashboard') # Redirect to dashboard on error
+
+@login_required
+@staff_member_required
+def staff_user_detail_view(request, pk):
+    """
+    Staff view to display details of a specific user.
+    """
+    try:
+        # Fetch the user and prefetch related profile data
+        user_obj = get_object_or_404(
+            User.objects.select_related('profile__user_level', 'profile__valid_status', 'profile__division', 'profile__seller_specific_profile'),
+            pk=pk
+        )
+        context = {
+            'user_obj': user_obj,
+        }
+        return render(request, 'staff/user_detail.html', context)
+    except Exception as e:
+        messages.error(request, f"An error occurred while fetching user details: {str(e)}")
+        print(f"Error in staff_user_detail_view (User PK: {pk}): {str(e)}")
+        return redirect('staff_user_list') # Redirect back to user list on error
+
+@login_required
+@staff_member_required # General staff can view, permissions can be refined later
+def staff_user_orders_view(request, user_id):
+    """
+    Staff view to list all orders for a specific user.
+    """
+    target_user = get_object_or_404(User, pk=user_id)
+    from home.models import Order # Local import
+
+    order_list = Order.objects.filter(user=target_user).order_by('-date_order')
+
+    paginator = Paginator(order_list, 15) # Show 15 orders per page
+    page_number = request.GET.get('page')
+    try:
+        orders = paginator.page(page_number)
+    except PageNotAnInteger:
+        orders = paginator.page(1)
+    except EmptyPage:
+        orders = paginator.page(paginator.num_pages)
+
+    context = {
+        'orders': orders,
+        'target_user': target_user,
+        'page_title': f"Orders for {target_user.username}",
+    }
+    # We can reuse the 'staff/all_orders.html' template if we make it flexible
+    # or create a new one 'staff/user_orders.html'
+    return render(request, 'staff/all_orders.html', context) # Reusing for now
+
+@login_required
+@admin_or_hr_required # Restrict editing to SDM or Superusers
+def staff_user_edit_view(request, pk):
+    """
+    Staff view to edit details of a specific user.
+    Restricted to SDM division and Superusers.
+    """
+    try:
+        # Fetch the user and related profile data
+        user_obj = get_object_or_404(User.objects.select_related('profile'), pk=pk)
+        profile = user_obj.profile # Assuming profile always exists due to signal
+
+        # Handle SellerProfile separately if needed, or include fields in StaffProfileEditForm
+        # For simplicity now, we'll just edit User and Profile.
+        # If you need to edit SellerProfile fields, you'd fetch it here:
+        # seller_profile = hasattr(profile, 'seller_specific_profile') ? profile.seller_specific_profile : None
+
+        if request.method == 'POST':
+            user_form = StaffUserBaseForm(request.POST, instance=user_obj, prefix="user")
+            profile_form = StaffProfileEditForm(request.POST, instance=profile, prefix="profile")
+
+            if user_form.is_valid() and profile_form.is_valid():
+                user_form.save()
+                profile_form.save()
+                # If you had a seller_form, you'd validate and save it here too.
+
+                messages.success(request, f"User '{user_obj.username}' details updated successfully.")
+                return redirect('staff_user_detail', pk=user_obj.pk)
+            else:
+                messages.error(request, "Failed to update user details. Please review the errors below.")
+        else:
+            user_form = StaffUserBaseForm(instance=user_obj, prefix="user")
+            profile_form = StaffProfileEditForm(instance=profile, prefix="profile")
+            # If you had a seller_form, instantiate it here:
+            # seller_form = StaffSellerProfileEditForm(instance=seller_profile, prefix="seller")
+
+        context = {
+            'user_obj': user_obj,
+            'user_form': user_form,
+            'profile_form': profile_form,
+            # 'seller_form': seller_form, # Include if you add seller form
+        }
+        return render(request, 'staff/user_edit.html', context)
+    except Exception as e:
+        messages.error(request, f"An error occurred while loading the edit page for user {pk}: {str(e)}")
+        print(f"Error in staff_user_edit_view (User PK: {pk}): {str(e)}")
+        return redirect('staff_user_list') # Redirect back to user list on error
