@@ -1,0 +1,109 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block content %}
+<section class="under-nav">
+    <div class="container mt-4">
+        <header class="mb-4 d-flex justify-content-between align-items-center">
+            <h2 class="card-title">{{ page_title|default:"Product List" }}</h2>
+            <a href="{% url 'customers:staff_dashboard' %}" class="btn btn-outline-secondary btn-sm">Back to Staff Dashboard</a>
+        </header>
+
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        {% if products %}
+            <div class="card">
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Name</th>
+                                    <th scope="col">Category</th>
+                                    <th scope="col">Seller</th>
+                                    <th scope="col">Price</th>
+                                    <th scope="col">Stock</th>
+                                    <th scope="col">Uploaded</th>
+                                    <th scope="col">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for product in products %}
+                                <tr>
+                                    <td>
+                                        {% if product.main_image %}
+                                            <img src="{{ product.main_image.url }}" alt="{{ product.name }}" style="width: 40px; height: 40px; object-fit: cover; margin-right: 10px;">
+                                        {% else %}
+                                            {# product.imageThumbnail wll provide a gallery image url or empty.png #}
+                                            <img src="{{product.imageThumbnail}}" alt="{% if product.imageThumbnail != '/static/empty.png' %}{{product.name}} thumbnail{% else %}No image available{% endif%}" style="width: 40px; height: 40px; object-fit: cover; margin-right: 10px;">
+                                        {% endif %}
+                                        {{ product.name }}
+                                    </td>
+                                    <td>{{ product.category.name|default:"N/A" }}</td>
+                                    <td>{{ product.seller.username|default:"N/A" }}</td>
+                                    <td>Rp {{ product.price|floatformat:2|intcomma }}</td>
+                                    <td>{{ product.stock }}</td>
+                                    <td>{{ product.upload_time|date:"d M Y" }}</td>
+                                    <td>
+                                        {# Link to public product page #}
+                                        {% if product.category and product.category.slug and product.slug %}
+                                            <a href="{% url 'homey:product_detail' product.category.slug product.slug %}" class="btn btn-sm btn-outline-secondary" target="_blank">Public View</a>
+                                        {% else %}
+                                            <span class="btn btn-sm btn-outline-secondary disabled" title="Cannot generate public link (missing slug)">Public View</span>
+                                        {% endif %}
+                                        {# Link to staff delete product view #}
+                                        {# Add permission check if needed for delete action, e.g. specific division #}
+                                        <a href="{% url 'customers:staff_product_delete' product.pk %}" class="btn btn-sm btn-danger">Delete</a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    {# Pagination #}
+                    {% if products.has_other_pages %}
+                        <nav aria-label="Page navigation">
+                            <ul class="pagination justify-content-center">
+                                {% if products.has_previous %}
+                                    <li class="page-item"><a class="page-link" href="?page={{ products.previous_page_number }}">Previous</a></li>
+                                {% else %}
+                                    <li class="page-item disabled"><span class="page-link">Previous</span></li>
+                                {% endif %}
+
+                                {% for i in products.paginator.page_range %}
+                                    {% if products.number == i %}
+                                        <li class="page-item active"><span class="page-link">{{ i }} <span class="sr-only">(current)</span></span></li>
+                                    {% else %}
+                                        <li class="page-item"><a class="page-link" href="?page={{ i }}">{{ i }}</a></li>
+                                    {% endif %}
+                                {% endfor %}
+
+                                {% if products.has_next %}
+                                    <li class="page-item"><a class="page-link" href="?page={{ products.next_page_number }}">Next</a></li>
+                                {% else %}
+                                    <li class="page-item disabled"><span class="page-link">Next</span></li>
+                                {% endif %}
+                            </ul>
+                        </nav>
+                    {% endif %}
+                </div>
+            </div>
+        {% else %}
+            <div class="alert alert-info" role="alert">
+                No products found.
+            </div>
+        {% endif %}
+    </div>
+</section>
+{% endblock content %}

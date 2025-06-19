@@ -43,7 +43,7 @@
                                     <td>{{ order.get_cart_items }}</td>
                                     <td>Rp {{ order.get_cart_totals|floatformat:0|intcomma }}</td>
                                     <td>{{ order.status.name|default:"N/A" }}</td>
-                                    <td><a href="{% url 'customer_order_detail' order.transaction_id %}" class="btn btn-sm btn-info">View Details</a></td>
+                                    <td><a href="{% url 'customers:customer_order_detail' order.transaction_id %}" class="btn btn-sm btn-info">View Details</a></td>
                                 </tr>
                                 {% endfor %}
                             </tbody>

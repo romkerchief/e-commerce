@@ -1,0 +1,87 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block content %}
+<section class="under-nav">
+    <div class="container mt-4">
+        <header class="mb-4 d-flex justify-content-between align-items-center">
+            <h2 class="card-title">{{ page_title|default:"My Conversations" }}</h2>
+            {# Optional: Link back to profile or dashboard #}
+            {# <a href="{% url 'customers:view_profile' %}" class="btn btn-outline-secondary btn-sm">Back to Profile</a> #}
+        </header>
+
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        {% if chat_sessions %}
+            <div class="list-group">
+                {% for session in chat_sessions %}
+                    {% comment %} Determine the other participant in the chat {% endcomment %}
+                    {% if request.user == session.buyer %}
+                        {% with other_participant=session.seller %}
+                        <a href="{% url 'chat:chat_session' session.id %}" class="list-group-item list-group-item-action flex-column align-items-start">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h5 class="mb-1">Chat with {{ other_participant.username }} {% if session.seller.profile.user_level.name == "Penjual" %}(Seller){% endif %}</h5>
+                                <small class="text-muted">{{ session.updated_at|timesince }} ago</small>
+                            </div>
+                            {% if session.product %}
+                                <p class="mb-1"><small>Regarding: {{ session.product.name }}</small></p>
+                            {% endif %}
+                            {% with last_message=session.messages.last %}
+                                {% if last_message %}
+                                    <small class="text-muted">
+                                        {{ last_message.sender.username }}: {{ last_message.content|truncatewords:10 }}
+                                        {% if not last_message.is_read and last_message.sender != request.user %}
+                                            <span class="badge badge-pill badge-primary ml-2">New</span>
+                                        {% endif %}
+                                    </small>
+                                {% else %}
+                                    <small class="text-muted">No messages yet.</small>
+                                {% endif %}
+                            {% endwith %}
+                        </a>
+                        {% endwith %}
+                    {% else %} {# request.user is the seller in this session #}
+                        {% with other_participant=session.buyer %}
+                        <a href="{% url 'chat:chat_session' session.id %}" class="list-group-item list-group-item-action flex-column align-items-start">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h5 class="mb-1">Chat with {{ other_participant.username }} (Buyer)</h5>
+                                <small class="text-muted">{{ session.updated_at|timesince }} ago</small>
+                            </div>
+                            {% if session.product %}
+                                <p class="mb-1"><small>Regarding: {{ session.product.name }}</small></p>
+                            {% endif %}
+                            {% with last_message=session.messages.last %}
+                                {% if last_message %}
+                                    <small class="text-muted">
+                                        {{ last_message.sender.username }}: {{ last_message.content|truncatewords:10 }}
+                                        {% if not last_message.is_read and last_message.sender != request.user %}
+                                            <span class="badge badge-pill badge-primary ml-2">New</span>
+                                        {% endif %}
+                                    </small>
+                                {% else %}
+                                    <small class="text-muted">No messages yet.</small>
+                                {% endif %}
+                            {% endwith %}
+                        </a>
+                        {% endwith %}
+                    {% endif %}
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="alert alert-info mt-3" role="alert">
+                You have no active conversations.
+            </div>
+        {% endif %}
+    </div>
+</section>
+{% endblock content %}

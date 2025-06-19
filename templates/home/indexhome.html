@@ -61,7 +61,8 @@
 							<div class="col-md-3 col-sm-6 kartu-produk">
 								<figure class="card card-product-grid mb-3">
 									<div class="img-wrap img-product">
-										<a href="{% url 'homey:detail' product.slug %}">
+										{% if product.category and product.category.slug and product.slug %}
+										<a href="{% url 'homey:product_detail' product.category.slug product.slug %}">
 											{% if product.main_image %}
 												<img src="{{ product.main_image.url }}" class='img-product d-flex mx-auto'>
 											{% elif product.imageThumbnail and product.imageThumbnail != '/static/empty.png' %}
@@ -70,9 +71,17 @@
 												<img src="{% static 'images/empty.png' %}" class='img-product d-flex mx-auto'>
 											{% endif %}
 										</a>
+										{% else %}
+											{# Fallback if slugs are missing - link to a generic product page or show a placeholder #}
+											<img src="{% static 'images/empty.png' %}" class='img-product d-flex mx-auto'>
+										{% endif %}
 									</div>
 									<figcaption class="info-wrap text-center">
-										<a href="{% url 'homey:detail' product.slug %}" class="title-product text-decoration-none text-truncate">{{product.name}}</a>
+										{% if product.category and product.category.slug and product.slug %}
+										<a href="{% url 'homey:product_detail' product.category.slug product.slug %}" class="title-product text-decoration-none text-truncate">{{product.name}}</a>
+										{% else %}
+										<span class="title-product text-decoration-none text-truncate">{{product.name}}</span>
+										{% endif %}
 										{% if product.seller and product.seller.profile and product.seller.profile.seller_specific_profile and product.seller.profile.seller_specific_profile.slug %}
 											<p class="text-muted small mb-1">
 												Sold by: <a href="{% url 'homey:store_detail' product.seller.profile.seller_specific_profile.slug %}" class="text-decoration-none">{{ product.seller.profile.seller_specific_profile.store_name }}</a>

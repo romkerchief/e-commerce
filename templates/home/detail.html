@@ -77,7 +77,11 @@
             <a data-action='add' data-product='{{product.id}}' href="" class="btn btn-primary update-cart">
               Masukkan Keranjang <i class = "fas fa-shopping-cart"></i>
             </a>
-
+            {% if request.user.is_authenticated and product.seller and request.user != product.seller %}
+            <a href="{% url 'chat:start_chat_for_product' product.id %}" class="btn btn-info ml-2">
+              Chat Penjual <i class="fas fa-comments"></i>
+            </a>
+            {% endif %}
           </div>
         </div>
       </div>
@@ -91,7 +95,8 @@
             <div class="col-md-3 col-sm-6 col-6 p-1">
               <figure class="card card-product-grid" style="height: 300px;">
                 <div class="img-wrap img-product">
-                  <a href="{% url 'homey:detail' produk.slug %}">
+                  {% if produk.category and produk.category.slug and produk.slug %}
+                  <a href="{% url 'homey:product_detail' produk.category.slug produk.slug %}">
                     {% if produk.main_image %}
                         <img src="{{ produk.main_image.url }}">
                     {% elif produk.imageThumbnail and produk.imageThumbnail != '/static/empty.png' %}
@@ -100,11 +105,20 @@
                         <img src="{% static 'images/empty.png' %}" >
                     {% endif %}
                   </a>
-                  <a class="btn-overlay" href="{% url 'homey:detail' produk.slug %}"><i class="fa fa-search-plus"></i> Quick view</a>
+                  {% endif %}
+                  {% if produk.category and produk.category.slug and produk.slug %}
+                  <a class="btn-overlay" href="{% url 'homey:product_detail' produk.category.slug produk.slug %}"><i class="fa fa-search-plus"></i> Quick view</a>
+                  {% else %}
+                  <span class="btn-overlay disabled"><i class="fa fa-search-plus"></i> Quick view</span>
+                  {% endif %}
                 </div> <!-- img-wrap.// -->
                 <figcaption class="info-wrap text-center ">
                   <div class="fix-height">
-                    <a href="{% url 'homey:detail' produk.slug %}" class="title title-product text-decoration-none">{{produk.name}}</a>
+                    {% if produk.category and produk.category.slug and produk.slug %}
+                    <a href="{% url 'homey:product_detail' produk.category.slug produk.slug %}" class="title title-product text-decoration-none">{{produk.name}}</a>
+                    {% else %}
+                    <span class="title title-product text-decoration-none">{{produk.name}}</span>
+                    {% endif %}
                     {% if produk.seller and produk.seller.profile and produk.seller.profile.seller_specific_profile and produk.seller.profile.seller_specific_profile.store_name %}
                       <p class="text-muted small mb-1">
                         Sold by: <a href="{% url 'homey:store_detail' produk.seller.profile.seller_specific_profile.slug %}" class="text-decoration-none">{{ produk.seller.profile.seller_specific_profile.store_name }}</a>

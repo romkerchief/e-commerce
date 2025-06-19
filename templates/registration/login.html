@@ -27,7 +27,7 @@
                     </div>
                 {% endif %}
 
-                <form method="POST" action="{% url 'customer_login' %}">
+                <form method="POST" action="{% url 'customers:customer_login' %}">
                     {% csrf_token %}
                     <div class="form-group">
                        <label for="{{ form.username.id_for_label }}">Username</label>
@@ -43,10 +43,10 @@
                         <button type="submit" class="btn btn-primary btn-block"> Login  </button>
                     </div> <!-- form-group// -->
                     <div class="form-group text-center mt-3">
-                      <a href="{% url 'password_reset' %}">Forgot password?</a>
+                      <a href="{% url 'customers:password_reset' %}">Forgot password?</a>
                     </div>
                 </form>
-                <div class="card-footer text-center">Don't have an account? <a href="{% url 'register' %}">Sign up</a></div>
+                <div class="card-footer text-center">Don't have an account? <a href="{% url 'customers:register' %}">Sign up</a></div>
               </div> <!-- card-body.// -->
               
             </div> <!-- card .// -->

@@ -25,7 +25,8 @@
         {% endif %}
 
         <div class="mb-3">
-            <a href="{% url 'homey:seller_product_create' %}" class="btn btn-primary">Add New Product</a>
+            <a href="{% url 'homey:seller_product_create' %}" class="btn btn-success">Add New Product</a>
+            <a href="{% url 'chat:seller_chat_list' %}" class="btn btn-info ml-2">View My Chats</a>
         </div>
 
         <div class="card mb-4">
@@ -105,7 +106,7 @@
                             <tbody>
                                 {% for item in seller_order_items %}
                                 <tr>
-                                    <td><a href="{% url 'seller_order_detail' item.order.transaction_id %}">{{ item.order.transaction_id }}</a></td>
+                                    <td><a href="{% url 'customers:seller_order_detail' item.order.transaction_id %}">{{ item.order.transaction_id }}</a></td>
                                     <td>{{ item.order.date_order|date:"d M Y, H:i" }}</td>
                                     <td>{{ item.order.user.username|default:"Guest" }}</td>
                                     <td>{{ item.product.name }}</td>

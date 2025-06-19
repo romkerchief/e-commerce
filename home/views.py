@@ -70,7 +70,9 @@ class ProductDetail(TemplateView):
     model = Product
     def get_context_data(self,**kwargs):
         context = super().get_context_data()
-        context['product'] = self.model.objects.get(slug=kwargs['slug'])
+        # Use product_slug from URL kwargs, category_slug is also available in kwargs if needed for filtering
+        # Assuming product slugs are unique, category_slug might be for URL structure/SEO
+        context['product'] = self.model.objects.get(slug=kwargs['product_slug'])
         product_obj = context['product']
 
         # Prepare images for the carousel
@@ -85,7 +87,7 @@ class ProductDetail(TemplateView):
                  carousel_image_urls.append(img_instance.imageURL)
 
         context["carousel_image_urls"] = carousel_image_urls
-        exclude_object = Product.objects.exclude(slug=kwargs['slug'])
+        exclude_object = Product.objects.exclude(slug=kwargs['product_slug'])
         paginator = Paginator(exclude_object,4)
         prod_list = paginator.get_page(None)
         context['product_list']=prod_list

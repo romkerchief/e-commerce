@@ -124,7 +124,8 @@
             <div class="col-md-4 col-sm-6 col-6 p-1">
                 <figure class="card card-product-grid" style="height: 400px;">
                     <div class="img-wrap img-product">
-                        <a href="{% url 'homey:detail' product.slug %}">
+                        {% if product.category and product.category.slug and product.slug %}
+                        <a href="{% url 'homey:product_detail' product.category.slug product.slug %}">
                             {% if product.main_image %}
                                 <img src="{{ product.main_image.url }}">
                             {% elif product.imageThumbnail and product.imageThumbnail != '/static/empty.png' %}
@@ -133,11 +134,22 @@
                                 <img src="{% static 'images/empty.png' %}" >
                             {% endif %}
                         </a>
-                        <a class="btn-overlay" href="{% url 'homey:detail' product.slug %}"><i class="fa fa-search-plus"></i> Quick view</a>
+                        {% else %}
+                            <img src="{% static 'images/empty.png' %}" >
+                        {% endif %}
+                        {% if product.category and product.category.slug and product.slug %}
+                        <a class="btn-overlay" href="{% url 'homey:product_detail' product.category.slug product.slug %}"><i class="fa fa-search-plus"></i> Quick view</a>
+                        {% else %}
+                        <span class="btn-overlay disabled"><i class="fa fa-search-plus"></i> Quick view</span>
+                        {% endif %}
                     </div> <!-- img-wrap.// -->
                     <figcaption class="info-wrap text-center ">
                         <div class="fix-height">
-                            <a href="{% url 'homey:detail' product.slug %}" class="title title-product text-decoration-none">{{product.name}}</a>
+                            {% if product.category and product.category.slug and product.slug %}
+                            <a href="{% url 'homey:product_detail' product.category.slug product.slug %}" class="title title-product text-decoration-none">{{product.name}}</a>
+                            {% else %}
+                            <span class="title title-product text-decoration-none">{{product.name}}</span>
+                            {% endif %}
                             {% if product.seller and product.seller.profile and product.seller.profile.seller_specific_profile and product.seller.profile.seller_specific_profile.store_name %}										<p class="text-muted small mb-1">
                                 Sold by: <a href="{% url 'homey:store_detail' product.seller.profile.seller_specific_profile.slug %}" class="text-decoration-none">{{ product.seller.profile.seller_specific_profile.store_name }}</a>								</p>
 							{% endif %}
@@ -174,7 +186,7 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-                <a href="{% url 'customer_login' %}" class="btn btn-primary">Log In</a>
+                <a href="{% url 'customers:customer_login' %}" class="btn btn-primary">Log In</a>
             </div>
             </div>
         </div>

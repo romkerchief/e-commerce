@@ -9,6 +9,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('home.urls',namespace='homey')),
     path('customer/', include('customers.urls')),
+    path('chat/', include('chat.urls', namespace='chat')), # Add this line
 	path('accounts/', include('django.contrib.auth.urls')),
 ]
 

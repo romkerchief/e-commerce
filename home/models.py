@@ -27,6 +27,11 @@ class Category(models.Model):
     def __str__(self):
         return self.name
 
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = slugify(self.name)
+        super().save(*args, **kwargs)
+
 class Product(models.Model):
     category        = models.ForeignKey(Category,related_name='product', on_delete=models.CASCADE)
     seller          = models.ForeignKey(User, related_name='products', on_delete=models.CASCADE, null=True, blank=True)

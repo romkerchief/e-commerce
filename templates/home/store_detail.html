@@ -16,6 +16,14 @@
             {% else %}
                 <h2 class="card-title">Store Page</h2>
             {% endif %}
+            {% if seller_profile and seller_profile.profile and seller_profile.profile.user %}
+                <p class="mb-2">Owned by: {{ seller_profile.profile.user.username }}</p>
+                {% if request.user.is_authenticated and request.user != seller_profile.profile.user %}
+                <a href="{% url 'chat:start_chat_with_seller' seller_profile.profile.user.id %}" class="btn btn-primary btn-sm">
+                    Chat with Store Owner <i class="fas fa-comments"></i>
+                </a>
+                {% endif %}
+            {% endif %}
             {# You could add more store details here if available, e.g., store description, logo #}
         </header>
 
@@ -37,7 +45,8 @@
                     <div class="col-md-3 col-sm-6 kartu-produk">
                         <figure class="card card-product-grid mb-3">
                             <div class="img-wrap img-product">
-                                <a href="{% url 'homey:detail' product.slug %}">
+                                {% if product.category and product.category.slug and product.slug %}
+                                <a href="{% url 'homey:product_detail' product.category.slug product.slug %}">
                                     {% if product.main_image %}
                                         <img src="{{ product.main_image.url }}" class='img-product d-flex mx-auto'>
                                     {% elif product.imageThumbnail and product.imageThumbnail != '/static/empty.png' %}
@@ -46,9 +55,16 @@
                                         <img src="{% static 'images/empty.png' %}" class='img-product d-flex mx-auto'>
                                     {% endif %}
                                 </a>
+                                {% else %}
+                                    <img src="{% static 'images/empty.png' %}" class='img-product d-flex mx-auto'>
+                                {% endif %}
                             </div>
                             <figcaption class="info-wrap text-center">
-                                <a href="{% url 'homey:detail' product.slug %}" class="title-product text-decoration-none text-truncate">{{product.name}}</a>
+                                {% if product.category and product.category.slug and product.slug %}
+                                <a href="{% url 'homey:product_detail' product.category.slug product.slug %}" class="title-product text-decoration-none text-truncate">{{product.name}}</a>
+                                {% else %}
+                                <span class="title-product text-decoration-none text-truncate">{{product.name}}</span>
+                                {% endif %}
                                 <p class="price-product price mb-2">Rp {{product.price|floatformat:2|intcomma}} </p>
                                 <a href="" data-action='add' data-product='{{product.id}}' class="btn btn-primary btn-lg update-cart"> Add to cart </a>
                             </figcaption>

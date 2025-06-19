@@ -23,20 +23,29 @@
 
         <div class="list-group">
             {# Conditional links based on division can go here #}
-            {% if profile and profile.division and profile.division.name == "SDM" or user.is_superuser %}
-                <a href="{% url 'staff_register' %}" class="list-group-item list-group-item-action">
+            {% if user.is_superuser or profile and profile.division and profile.division.name == sdm_division_name %}
+                <a href="{% url 'customers:staff_register' %}" class="list-group-item list-group-item-action">
                     Register New Staff Member
                 </a>
             {% endif %}
 
-            {# Link to All Orders #}
-            <a href="{% url 'staff_all_orders' %}" class="list-group-item list-group-item-action">
-                View All Orders
-            </a>
-            {# Keep Manage Products link as is for now #}
-            <a href="#" class="list-group-item list-group-item-action disabled" tabindex="-1" aria-disabled="true">Manage Products (Coming Soon)</a>
-            {% if user.is_superuser or profile and profile.division and profile.division.name == "SDM" %}
-            <a href="{% url 'staff_user_list' %}" class="list-group-item list-group-item-action">User Management</a>
+            {# View All Orders: SDM, Penjualan, Keuangan, Superuser #}
+            {% if user.is_superuser or profile and profile.division and profile.division.name in orders_view_divisions %}
+                <a href="{% url 'customers:staff_all_orders' %}" class="list-group-item list-group-item-action">
+                    View All Orders
+                </a>
+            {% endif %}
+
+            {# Manage Products: Penjualan, Pembelian, SDM, Superuser #}
+            {% if user.is_superuser or profile and profile.division and profile.division.name in products_manage_divisions %}
+                <a href="{% url 'customers:staff_product_list' %}" class="list-group-item list-group-item-action">
+                    Manage Products
+                </a>
+            {% endif %}
+
+            {# User Management: SDM, Superuser #}
+            {% if user.is_superuser or profile and profile.division and profile.division.name == sdm_division_name %}
+                <a href="{% url 'customers:staff_user_list' %}" class="list-group-item list-group-item-action">User Management</a>
             {% endif %}
         </div>
 

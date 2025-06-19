@@ -1,12 +1,14 @@
 from django.urls import path,include
 from django.conf import settings
-from django.contrib.auth import views as auth_views # Import Django's auth views
+from django.contrib.auth import views as auth_views
 from django.conf.urls.static import static
 from .views import (
     registerPage, seller_register_page, loginPage, logoutPage,
-    verify_email, resend_verification, edit_profile, view_profile, customer_order_history_view, customer_order_detail_view, staff_register_view, staff_dashboard_view, staff_all_orders_view, staff_order_detail_view, staff_user_list_view, staff_user_detail_view, staff_user_orders_view, staff_user_edit_view, # Ensure these are imported
+    verify_email, resend_verification, edit_profile, view_profile, customer_order_history_view, customer_order_detail_view, staff_register_view, staff_dashboard_view, staff_all_orders_view, staff_order_detail_view, staff_user_list_view, staff_user_detail_view, staff_user_orders_view, staff_user_edit_view, staff_product_list_view, staff_product_delete_view,
     seller_dashboard_view, seller_order_detail_view
 )
+
+app_name = 'customers' # Add this line
 
 urlpatterns = [
 	path('register/',registerPage,name='register'),
@@ -26,6 +28,8 @@ urlpatterns = [
     path('staff/all-orders/', staff_all_orders_view, name='staff_all_orders'),
     path('staff/order-detail/<str:order_transaction_id>/', staff_order_detail_view, name='staff_order_detail'),
     path('staff/users/<int:pk>/', staff_user_detail_view, name='staff_user_detail'),
+    path('staff/product/<int:pk>/delete/', staff_product_delete_view, name='staff_product_delete'),
+    path('staff/products/', staff_product_list_view, name='staff_product_list'),
     path('staff/users/<int:user_id>/orders/', staff_user_orders_view, name='staff_user_orders'), # This pattern needs the view imported
     path('staff/users/<int:pk>/edit/', staff_user_edit_view, name='staff_user_edit'),
     path('staff/users/', staff_user_list_view, name='staff_user_list'), # This pattern needs the view imported

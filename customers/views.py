@@ -21,12 +21,17 @@ from .forms import FormSignUp,FormLogIn, ProfileUpdateForm, SellerSignUpForm, Se
 from home.models import Product, OrderStatus 
 from .forms import StaffUserBaseForm, StaffProfileEditForm
 
+# --- Decorators for Permission Checks ---
+
 def admin_or_hr_required(function):
+    """
+    Decorator to restrict access to views to Superusers or users in the "SDM" (HR) division.
+    """
     @wraps(function)
     def wrap(request, *args, **kwargs):
         if not request.user.is_authenticated:
-            messages.error(request, "Please log in to access this page.")
-            return redirect('login')
+            messages.error(request, "Please log in to access this page.") # type: ignore
+            return redirect('customers:customer_login')
 
         if request.user.is_superuser:
             return function(request, *args, **kwargs)
@@ -40,18 +45,22 @@ def admin_or_hr_required(function):
                 return redirect('homey:index') # Redirect to homepage or a 'permission denied' page
         except Profile.DoesNotExist:
             messages.error(request, "User profile not found. Please complete your profile or contact support.")
-            return redirect('edit_profile')
+            return redirect('customers:edit_profile')
         except AttributeError: # Handles if profile exists but division is None
             messages.error(request, "User profile is incomplete (division not set). You do not have permission to access this page.")
             return redirect('homey:index')
     return wrap
 
 def staff_member_required(function):
+    """
+    Decorator to restrict access to views to users with the Django `is_staff` flag set to True.
+    Redirects to the customer login page if not authenticated.
+    """
     @wraps(function)
     def wrap(request, *args, **kwargs):
         if not request.user.is_authenticated:
             messages.error(request, "Please log in to access this page.")
-            return redirect('customer_login') # Use your named URL for login
+            return redirect('customers:customer_login') # Use your named URL for login
 
         if request.user.is_staff: # Check the Django is_staff flag
             return function(request, *args, **kwargs)
@@ -60,8 +69,14 @@ def staff_member_required(function):
             return redirect('homey:index') # Redirect non-staff to homepage
     return wrap
 
+# --- Authentication and Profile Management Views ---
+
 @csrf_protect
 def registerPage(request):
+    """
+    Handles user registration. Creates a new user and profile, sends a verification email,
+    and logs the user in, redirecting to the email verification page.
+    """
     # inisialisasi form (kosong untuk request GET, terisi untuk POST)
     form = FormSignUp()
     
@@ -104,7 +119,7 @@ def registerPage(request):
                     
                     # login user dan redirect ke verify.html
                     login(request, user)
-                    return redirect('verify_email')
+                    return redirect('customers:verify_email')
                     
             except smtplib.SMTPException as e:
                 # Handle SMTP email sending errors
@@ -118,7 +133,7 @@ def registerPage(request):
                 # menghapus user jika email gagal dikirim
                 if user:
                     user.delete()
-                return redirect('register')
+                return redirect('customers:register')
                 
             except Exception as e:
                 # handle error lain
@@ -127,7 +142,7 @@ def registerPage(request):
                 # menghapus user jika ada error
                 if 'user' in locals() and user:
                     user.delete()
-                return redirect('register')
+                return redirect('customers:register')
                 
         else:
             # form tidak valid, kirim error message
@@ -144,6 +159,10 @@ def registerPage(request):
 
 @csrf_protect
 def seller_register_page(request):
+    """
+    Handles seller registration. Creates a new user and profile with 'Penjual' user_level,
+    creates a SellerProfile, sends a verification email, and logs the user in.
+    """
     form = SellerSignUpForm()
     if request.method == 'POST':
         form = SellerSignUpForm(request.POST)
@@ -186,7 +205,7 @@ def seller_register_page(request):
                     
                     login(request, user)
                     messages.info(request, "Seller account created. Please verify your email.")
-                    return redirect('verify_email') # Or a seller-specific welcome page
+                    return redirect('customers:verify_email') # Or a seller-specific welcome page
 
             except smtplib.SMTPException as e:
                 error_message = "Gagal mengirimkan Email verifikasi."
@@ -194,12 +213,12 @@ def seller_register_page(request):
                 else: error_message += " Coba lagi nanti, atau hubungi admin."
                 messages.error(request, error_message)
                 if 'user' in locals() and user: user.delete()
-                return redirect('seller_register')
+                return redirect('customers:seller_register')
             except Exception as e:
                 messages.error(request, "Terjadi kesalahan sistem. Silahkan coba lagi.")
                 print(f"Unexpected error during seller registration: {str(e)}")
                 if 'user' in locals() and user: user.delete()
-                return redirect('seller_register')
+                return redirect('customers:seller_register')
         else:
             for field, errors in form.errors.items():
                 for error in errors:
@@ -210,59 +229,63 @@ def seller_register_page(request):
 
 
 def loginPage(request):
-    print(f"DEBUG: loginPage view called. Request method: {request.method}") # New top-level debug
+    #print(f"DEBUG: loginPage view called. Request method: {request.method}")
+    """
+    Handles user login. Authenticates the user and redirects based on their user level
+    (staff, seller, or regular user) after checking email verification.
+    """
     form = FormLogIn()
     if request.method == 'POST':
+        # Get username and password from the POST request
         username = request.POST.get('username')
         password = request.POST.get('password')
         user = authenticate(request, username=username, password=password)
         
-        print(f"DEBUG: Attempting login for user: {username}") # Check if this prints
+        #print(f"DEBUG: Attempting login for user: {username}") # Check if this prints
 
         if user is not None:
-            print(f"DEBUG: User '{username}' authenticated successfully.") # Check if this prints
-            # Check if profile exists and if email is verified.
-            # The signal should create the profile, but it's good to be defensive.
+            #print(f"DEBUG: User '{username}' authenticated successfully.") # Check if this prints
+            # The signal should create the profile
             if not hasattr(user, 'profile') or not user.profile.email_verified:
-                # You might also want to check user.profile.valid_status here,
-                # e.g., if user.profile.valid_status.name in ["Invalid", "Keluar"]
-                print(f"DEBUG: User '{username}' email not verified or profile missing. Redirecting to verify_email.") # Check if this prints
+                #print(f"DEBUG: User '{username}' email not verified or profile missing. Redirecting to verify_email.") # Check if this prints
                 messages.warning(request, 'Please verify your email first')
-                return redirect('verify_email')
+                return redirect('customers:verify_email')
             
             login(request, user)
-            print(f"DEBUG: User '{username}' logged in. Checking user level...") # Check if this prints
             if user.is_staff: # check if user is staff first
-                print(f"DEBUG: User '{user.username}' is a staff. Redirecting to staff_dashboard.") # Check if this prints
                 messages.success(request, f"Welcome Staff Member, {user.username}!")
-                return redirect('staff_dashboard')
+                return redirect('customers:staff_dashboard')
             elif hasattr(user, 'profile') and user.profile.user_level and user.profile.user_level.name == "Penjual":
-                print(f"DEBUG: User '{user.username}' is a Penjual. Redirecting to seller_dashboard.") # Check if this prints
                 messages.success(request, f"Welcome back, Seller {user.username}!")
-                return redirect('seller_dashboard')
+                return redirect('customers:seller_dashboard')
             else:
-                print(f"DEBUG: User '{user.username}' is not a Penjual (Level: {user.profile.user_level.name if hasattr(user, 'profile') and user.profile.user_level else 'N/A'}). Redirecting to homey:index.") # Check if this prints
                 messages.success(request, f"Welcome back, {user.username}!")
                 return redirect('homey:index')
         else:
-            print(f"DEBUG: Authentication failed for user: {username}") # Check if this prints
+            #print(f"DEBUG: Authentication failed for user: {username}")
+            # Get username and password from the POST request
             messages.error(request, 'Invalid credentials')
     
+    # Render the login page with the form
     context = {'form':form}
     return render(request,'registration/login.html', context)
 
 @login_required
 def logoutPage(request):
 	logout(request)
-	return redirect('login')
+	return redirect('customers:customer_login')
 
 @login_required
 def verify_email(request):
+    """
+    Handles email verification using a code sent to the user's email.
+    Allows the user to enter the code to verify their email address.
+    """
     try:
         profile = request.user.profile # Changed to user.profile
     except Profile.DoesNotExist: # Changed to Profile.DoesNotExist
         messages.error(request, "Profil tidak ditemukan. Silahkan daftar ulang.")
-        return redirect('register')
+        return redirect('customers:register')
     
     if profile.email_verified:
         return redirect('homey:index')
@@ -277,13 +300,17 @@ def verify_email(request):
                 return redirect('homey:index')
             else:
                 messages.error(request, "Kode sudah kedaluarsa. Silahkan minta resend")
-                return redirect('resend_verification')
+                return redirect('customers:resend_verification')
         else:
             messages.error(request, 'Invalid code')
     return render(request, 'registration/verify.html')
 
 @login_required
 def resend_verification(request):
+    """
+    Generates and sends a new email verification code to the user's email address.
+    Updates the profile with the new code and timestamp.
+    """
     profile = request.user.profile # Changed to user.profile
     new_code = f"{secrets.randbelow(10**6):06d}"
     profile.verification_code = new_code
@@ -297,10 +324,15 @@ def resend_verification(request):
         fail_silently=False,
     )
     messages.info(request, 'Kode baru telah dikirim ke email Anda')
-    return redirect('verify_email')
+    return redirect('customers:verify_email')
 
 @login_required
 def edit_profile(request):
+    """
+    Handles editing the user's profile information.
+    Includes fields from the main Profile and optionally SellerProfile if the user is a seller.
+    Handles email changes by requiring re-verification.
+    """
     try:
         profile = request.user.profile
     except Profile.DoesNotExist:
@@ -346,10 +378,10 @@ def edit_profile(request):
             if email_changed:
                 send_mail('Verify Your New Email Address', f'Your new verification code: {verification_code}', 'noreply@yourdomain.com', [new_email], fail_silently=False)
                 messages.info(request, 'Profile updated. Please verify your new email address.')
-                return redirect('verify_email')
+                return redirect('customers:verify_email')
             else:
                 messages.success(request, 'Profil Anda berhasil diperbarui.')
-                return redirect('edit_profile')
+                return redirect('customers:edit_profile')
         else:
             messages.error(request, "Harap perbaiki kesalahan di bawah ini.")
     else:
@@ -366,6 +398,10 @@ def edit_profile(request):
 
 @login_required
 def view_profile(request):
+    """
+    Displays the current user's profile information.
+    Fetches the user's Profile object.
+    """
     try:
         profile = request.user.profile
     except Profile.DoesNotExist:
@@ -387,7 +423,7 @@ def seller_required(function):
     @wraps(function)
     def wrap(request, *args, **kwargs):
         if not request.user.is_authenticated:
-            return redirect('login')
+            return redirect('customers:customer_login')
         try:
             profile = request.user.profile
             if profile.user_level and profile.user_level.name == "Penjual":
@@ -397,7 +433,7 @@ def seller_required(function):
                 return redirect('homey:index')
         except Profile.DoesNotExist:
             messages.error(request, "User profile not found. Please complete your profile.")
-            return redirect('edit_profile')
+            return redirect('customers:edit_profile')
         except AttributeError: # Handles if profile exists but user_level is None or no seller_specific_profile
             messages.error(request, "User profile incomplete or not configured for seller access.")
             return redirect('homey:index')
@@ -406,6 +442,10 @@ def seller_required(function):
 @login_required
 @admin_or_hr_required
 def staff_register_view(request):
+    """
+    Handles registration of new staff members.
+    Restricted to Superusers and users in the "SDM" division.
+    """
     if request.method == 'POST':
         form = StaffSignUpForm(request.POST)
         if form.is_valid():
@@ -438,7 +478,7 @@ def staff_register_view(request):
                         fail_silently=False,
                     )
                     messages.success(request, f"Staff account for {user.username} created and email automatically verified.")
-                    return redirect('staff_register') # Or a staff dashboard
+                    return redirect('customers:staff_register') # Or a staff dashboard
 
             except smtplib.SMTPException as e:
                 error_message = "Gagal mengirimkan Email verifikasi."
@@ -464,16 +504,32 @@ def staff_register_view(request):
 @login_required
 @staff_member_required # Protect this dashboard
 def staff_dashboard_view(request):
+    """
+    Displays the staff dashboard.
+    Shows links to different staff functionalities based on the user's division and superuser status.
+    """
+    profile = request.user.profile if hasattr(request.user, 'profile') else None
+    
+    # Define division lists for template conditions
+    orders_view_divisions = ["SDM", "Penjualan", "Keuangan"]
+    products_manage_divisions = ["Penjualan", "Pembelian", "SDM"]
+    sdm_division_name = "SDM" # For single division checks
+
     context = {
         'greeting': f"Welcome to the Staff Dashboard, {request.user.username}!",
-        # We can add more context here later based on division, etc.
-        'profile': request.user.profile if hasattr(request.user, 'profile') else None,
+        'profile': profile,
+        'orders_view_divisions': orders_view_divisions,
+        'products_manage_divisions': products_manage_divisions,
+        'sdm_division_name': sdm_division_name,
     }
     return render(request, 'staff/staff_dashboard.html', context)
 
 @login_required
 @staff_member_required
 def staff_all_orders_view(request):
+    """
+    Staff view to list all orders placed in the system. Includes pagination.
+    """
     from home.models import Order # Local import
     # Fetch all orders, potentially filter or sort as needed
     # Show all orders, most recent first
@@ -496,6 +552,9 @@ def staff_all_orders_view(request):
 @login_required
 @staff_member_required
 def staff_order_detail_view(request, order_transaction_id):
+    """
+    Staff view to display details of a specific order and update its status.
+    """
     from home.models import Order, OrderItem, ShippingAddress # type: ignore
 
     order = get_object_or_404(Order, transaction_id=order_transaction_id)
@@ -507,7 +566,7 @@ def staff_order_detail_view(request, order_transaction_id):
         if status_form.is_valid():
             status_form.save()
             messages.success(request, f"Order '{order.transaction_id}' status has been updated successfully.")
-            return redirect('staff_order_detail', order_transaction_id=order.transaction_id)
+            return redirect('customers:staff_order_detail', order_transaction_id=order.transaction_id)
         else:
             messages.error(request, "Failed to update order status. Please review the errors below.")
     else:
@@ -523,21 +582,24 @@ def staff_order_detail_view(request, order_transaction_id):
         return render(request, 'staff/staff_order_detail.html', context)
     except Order.DoesNotExist:
         messages.error(request, "Order not found.")
-        return redirect('staff_all_orders')
+        return redirect('customers:staff_all_orders')
     except Exception as e:
         messages.error(request, "An error occurred while fetching order details.")
         print(f"Error in staff_order_detail_view: {str(e)}")
-        return redirect('staff_all_orders')
+        return redirect('customers:staff_all_orders')
 
 @login_required
 @seller_required
 def seller_dashboard_view(request):
+    """
+    Displays the seller dashboard. Shows the seller's store name, products, and recent sales.
+    """
     seller_profile_obj = None
     products_list = []
     try:
         # print(f"DEBUG: User: {request.user.username}, User Level: {request.user.profile.user_level.name if hasattr(request.user, 'profile') and request.user.profile.user_level else 'N/A'}")
         profile = request.user.profile
-        # print(f"[Seller Dashboard] Current user: {request.user.username} (ID: {request.user.id})") # DEBUG
+        # print(f"[Seller Dashboard] Current user: {request.user.username} (ID: {request.user.id})")
 
         if hasattr(profile, 'seller_specific_profile'):
             seller_profile_obj = profile.seller_specific_profile
@@ -568,6 +630,9 @@ def seller_dashboard_view(request):
 @login_required
 @seller_required
 def seller_order_detail_view(request, order_transaction_id):
+    """
+    Seller view to display details of a specific order, filtered to show only items from their store.
+    """
     try:
         # Fetch the specific order
         # Assuming transaction_id is unique for orders
@@ -588,14 +653,18 @@ def seller_order_detail_view(request, order_transaction_id):
         return render(request, 'sellers/seller_order_detail.html', context)
     except Order.DoesNotExist:
         messages.error(request, "Order not found or you do not have permission to view it.")
-        return redirect('seller_dashboard')
+        return redirect('customers:seller_dashboard')
     except Exception as e:
         messages.error(request, "An error occurred while fetching order details.")
         print(f"Error in seller_order_detail_view (Transaction ID: {order_transaction_id}, User: {request.user.username}): Type: {type(e).__name__}, Details: {e}")
-        return redirect('seller_dashboard')
+        return redirect('customers:seller_dashboard')
 
 @login_required
 def customer_order_history_view(request):
+    """
+    Customer view to display their order history.
+    Lists orders that are not in the default "cart" status.
+    """
     try:
         from home.models import Order, OrderStatus # Ensure OrderStatus is imported
         
@@ -618,11 +687,15 @@ def customer_order_history_view(request):
     except Exception as e:
         messages.error(request, "An error occurred while fetching your order history.")
         print(f"Error in customer_order_history_view: {str(e)}")
-        # Redirect to a safe page, like the homepage or profile view
-        return redirect('view_profile')
+        # Redirect to a safe page, like the profile view, using the correct namespace.
+        return redirect('customers:view_profile')
 
 @login_required
 def customer_order_detail_view(request, order_transaction_id):
+    """
+    Customer view to display details of a specific order.
+    Ensures the order belongs to the current user and is not their active cart.
+    """
     try:
         from home.models import Order, OrderItem, ShippingAddress, OrderStatus # Import OrderStatus
         # Fetch the specific order, ensuring it belongs to the current user
@@ -642,14 +715,14 @@ def customer_order_detail_view(request, order_transaction_id):
             'order_items': order_items,
             'shipping_address': shipping_address,
         }
-        return render(request, 'customers/customer_order_detail.html', context)
+        return render(request, 'customers/customer_order_detail.html', context) # Correct template path
     except Order.DoesNotExist:
         messages.error(request, "Order not found or you do not have permission to view it.")
-        return redirect('customer_order_history')
+        return redirect('customers:customer_order_history') # Correct namespace for redirect
     except Exception as e:
         messages.error(request, "An error occurred while fetching order details.")
         print(f"Error in customer_order_detail_view: {str(e)}")
-        return redirect('customer_order_history')
+        return redirect('customers:customer_order_history')
 
 @login_required
 @staff_member_required
@@ -674,7 +747,7 @@ def staff_user_list_view(request):
     except Exception as e:
         messages.error(request, f"An error occurred while fetching the user list: {str(e)}")
         print(f"Error in staff_user_list_view: {str(e)}")
-        return redirect('staff_dashboard') # Redirect to dashboard on error
+        return redirect('customers:staff_dashboard') # Redirect to dashboard on error
 
 @login_required
 @staff_member_required
@@ -695,7 +768,7 @@ def staff_user_detail_view(request, pk):
     except Exception as e:
         messages.error(request, f"An error occurred while fetching user details: {str(e)}")
         print(f"Error in staff_user_detail_view (User PK: {pk}): {str(e)}")
-        return redirect('staff_user_list') # Redirect back to user list on error
+        return redirect('customers:staff_user_list') # Redirect back to user list on error
 
 @login_required
 @staff_member_required # General staff can view, permissions can be refined later
@@ -753,7 +826,7 @@ def staff_user_edit_view(request, pk):
                 # If you had a seller_form, you'd validate and save it here too.
 
                 messages.success(request, f"User '{user_obj.username}' details updated successfully.")
-                return redirect('staff_user_detail', pk=user_obj.pk)
+                return redirect('customers:staff_user_detail', pk=user_obj.pk)
             else:
                 messages.error(request, "Failed to update user details. Please review the errors below.")
         else:
@@ -772,4 +845,51 @@ def staff_user_edit_view(request, pk):
     except Exception as e:
         messages.error(request, f"An error occurred while loading the edit page for user {pk}: {str(e)}")
         print(f"Error in staff_user_edit_view (User PK: {pk}): {str(e)}")
-        return redirect('staff_user_list') # Redirect back to user list on error
+        return redirect('customers:staff_user_list') # Redirect back to user list on error
+
+@login_required
+@staff_member_required # Or a more specific permission decorator if needed
+def staff_product_list_view(request):
+    """
+    Staff view to list all products in the system.
+    Allows for future management like editing, delisting, etc.
+    """
+    try:
+        products_list = Product.objects.all().select_related('category', 'seller').order_by('-upload_time')
+
+        paginator = Paginator(products_list, 20) # Show 20 products per page
+        page_number = request.GET.get('page')
+        products = paginator.get_page(page_number)
+
+        context = {
+            'products': products,
+            'page_title': "Manage All Products"
+        }
+        return render(request, 'staff/product_list.html', context)
+    except Exception as e:
+        messages.error(request, f"An error occurred while fetching the product list: {str(e)}")
+        print(f"Error in staff_product_list_view: {str(e)}")
+        return redirect('customers:staff_dashboard')
+
+@login_required
+@staff_member_required # Or a more specific permission like @admin_or_hr_required
+def staff_product_delete_view(request, pk):
+    """
+    Staff view to delete a product.
+    """
+    product = get_object_or_404(Product, pk=pk)
+    if request.method == 'POST':
+        product_name = product.name # Get name before deleting for the message
+        try:
+            product.delete()
+            messages.success(request, f"Product '{product_name}' has been deleted successfully by staff.")
+        except Exception as e:
+            messages.error(request, f"An error occurred while trying to delete product '{product_name}': {str(e)}")
+            print(f"Error in staff_product_delete_view (POST) for product PK {pk}: {str(e)}")
+        return redirect('customers:staff_product_list')
+    
+    context = {
+        'product': product,
+        'page_title': f"Confirm Delete: {product.name}"
+    }
+    return render(request, 'staff/product_confirm_delete.html', context)

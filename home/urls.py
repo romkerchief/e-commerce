@@ -2,7 +2,7 @@ from django.urls import path
 from .views import (
     HomeView, ProductDetail, ShippingView, updateItem,
     seller_product_create, seller_product_update, seller_product_delete,
-    store_detail_view
+    store_detail_view, staff_order_detail_view
 )
 
 
@@ -10,7 +10,7 @@ app_name = 'homey'
 urlpatterns = [
     path('',HomeView.as_view(template_name='home/indexhome.html',paginate_by=4),name='index'),
     path('products/',HomeView.as_view(template_name='home/producthome.html',paginate_by=6),name='product'),
-    path('products/<slug:slug>/',ProductDetail.as_view(template_name='home/detail.html'),name='detail'),
+    path('products/<slug:category_slug>/<slug:product_slug>/',ProductDetail.as_view(template_name='home/detail.html'),name='product_detail'),
     path('cart/',HomeView.as_view(template_name='home/cart.html'),name="cart"),
     path('checkout/',ShippingView,name='checkout'),
     path('update-item/',updateItem, name='update-item'),

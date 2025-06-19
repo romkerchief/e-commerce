@@ -1,0 +1,171 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block style %}
+<style>
+    .chat-container {
+        max-width: 700px;
+        margin: auto;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        overflow: hidden;
+    }
+    .chat-header {
+        background-color: #f8f9fa;
+        padding: 15px;
+        border-bottom: 1px solid #ddd;
+        font-size: 1.2em;
+    }
+    .chat-messages {
+        height: 400px;
+        overflow-y: auto;
+        padding: 15px;
+        background-color: #fff;
+    }
+    .message {
+        margin-bottom: 15px;
+        padding: 10px;
+        border-radius: 20px;
+        max-width: 70%;
+    }
+    .message.sent {
+        background-color: #007bff;
+        color: white;
+        margin-left: auto;
+        border-bottom-right-radius: 5px;
+    }
+    .message.received {
+        background-color: #e9ecef;
+        color: #333;
+        border-bottom-left-radius: 5px;
+    }
+    .message-form {
+        padding: 15px;
+        border-top: 1px solid #ddd;
+        background-color: #f8f9fa;
+    }
+</style>
+{% endblock style %}
+
+{% block content %}
+<section class="under-nav" data-session-id="{{ session.id }}" data-current-user="{{ request.user.username }}">
+    <div class="container mt-4">
+        <div class="chat-container">
+            <div class="chat-header">
+                Chat with {{ recipient.username }}
+                {% if session.product %}
+                    <small class="d-block text-muted">Regarding: {{ session.product.name }}</small>
+                {% endif %}
+            </div>
+            <div class="chat-messages" id="chat-messages-container">
+                {% for msg in chat_messages %}
+                    <div class="message {% if msg.sender == request.user %}sent{% else %}received{% endif %}">
+                        <p class="mb-0">{{ msg.content }}</p>
+                        <small class="text-muted {% if msg.sender == request.user %}float-right{% else %}float-left{% endif %}">
+                            {{ msg.timestamp|date:"P, M d" }}
+                        </small>
+                    </div>
+                    <div style="clear: both;"></div>
+                {% empty %}
+                    <p>No messages yet. Start the conversation!</p>
+                {% endfor %}
+            </div>
+            <form method="post" class="message-form" id="chat-message-form">
+                {% csrf_token %}
+                <div class="input-group">
+                    <input type="text" name="content" id="chat-message-input" class="form-control" placeholder="Type your message..." required autocomplete="off">
+                    <div class="input-group-append">
+                        <button type="submit" class="btn btn-primary">Send</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</section>
+{% endblock content %}
+
+{% block script %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const chatMessagesContainer = document.getElementById('chat-messages-container');
+        const messageForm = document.getElementById('chat-message-form');
+        const messageInput = document.getElementById('chat-message-input');
+        const sectionElement = document.querySelector('.under-nav'); // Or a more specific element holding data attributes
+        const sessionId = sectionElement.dataset.sessionId;
+        const currentUserUsername = sectionElement.dataset.currentUser;
+
+        // Scroll to the bottom of the chat messages
+        function scrollToBottom() {
+            chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight;
+        }
+        scrollToBottom();
+
+        const chatSocket = new WebSocket(
+            (window.location.protocol === 'https:' ? 'wss://' : 'ws://') +
+            window.location.host +
+            '/ws/chat/' +
+            sessionId +
+            '/'
+        );
+
+        chatSocket.onopen = function(e) {
+            console.log('Chat socket connected successfully');
+        };
+
+        chatSocket.onmessage = function (e) {
+            const data = JSON.parse(e.data);
+            console.log("Received data from WebSocket:", data); // <-- Add this line for debugging
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('message');
+            if (data.sender_username === currentUserUsername) {
+                messageDiv.classList.add('sent');
+            } else {
+                messageDiv.classList.add('received');
+            }
+
+            const p = document.createElement('p');
+            p.classList.add('mb-0');
+            p.textContent = data.message;
+            messageDiv.appendChild(p);
+
+            const small = document.createElement('small');
+            small.classList.add('text-muted');
+            small.classList.add(data.sender_username === currentUserUsername ? 'float-right' : 'float-left');
+            small.textContent = new Date(data.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); // Simple time format
+            messageDiv.appendChild(small);
+
+            const clearer = document.createElement('div');
+            clearer.style.clear = 'both';
+
+            chatMessagesContainer.appendChild(messageDiv);
+            chatMessagesContainer.appendChild(clearer);
+            scrollToBottom();
+        };
+
+        chatSocket.onclose = function (e) {
+            console.error('Chat socket closed.');
+            console.error('Close event: ', e);
+            console.error('Code: ', e.code);
+            console.error('Reason: ', e.reason);
+            console.error('wasClean: ', e.wasClean);
+            // You could add logic here to attempt to reconnect or notify the user.
+        };
+
+        messageForm.addEventListener('submit', function (e) {
+            e.preventDefault();
+            const message = messageInput.value;
+            if (message.trim() === '') {
+                return;
+            }
+            chatSocket.send(JSON.stringify({
+                'message': message
+            }));
+            messageInput.value = ''; // Clear input field
+        });
+
+        chatSocket.onerror = function(err) {
+            console.error('WebSocket Error: ', err);
+        };
+    });
+</script>
+{% endblock script %}

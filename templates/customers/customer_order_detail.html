@@ -7,7 +7,7 @@
     <div class="container mt-4">
         <header class="mb-4 d-flex justify-content-between align-items-center">
             <h2 class="card-title">Order Details: {{ order.transaction_id }}</h2>
-            <a href="{% url 'customer_order_history' %}" class="btn btn-outline-secondary btn-sm">Back to Order History</a>
+            <a href="{% url 'customers:customer_order_history' %}" class="btn btn-outline-secondary btn-sm">Back to Order History</a>
         </header>
 
         {% if messages %}
