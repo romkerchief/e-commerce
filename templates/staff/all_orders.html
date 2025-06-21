@@ -9,9 +9,9 @@
             <h2 class="card-title">{{ page_title|default:"All Customer Orders" }}</h2>
             {% if target_user %}
                 {# If viewing orders for a specific user, link back to their detail page or user list #}
-                <a href="{% url 'staff_user_detail' target_user.pk %}" class="btn btn-outline-secondary btn-sm">Back to {{ target_user.username }}'s Details</a>
+                <a href="{% url 'customers:staff_user_detail' target_user.pk %}" class="btn btn-outline-secondary btn-sm">Back to {{ target_user.username }}'s Details</a>
             {% else %}
-                <a href="{% url 'staff_dashboard' %}" class="btn btn-outline-secondary btn-sm">Back to Staff Dashboard</a>
+                <a href="{% url 'customers:staff_dashboard' %}" class="btn btn-outline-secondary btn-sm">Back to Staff Dashboard</a>
             {% endif %}
         </header>
 
@@ -51,7 +51,7 @@
                                     <td>{{ order.get_cart_items }}</td>
                                     <td>Rp {{ order.get_cart_totals|floatformat:0|intcomma }}</td>
                                     <td>{{ order.status.name|default:"N/A" }}</td>
-                                    <td><a href="{% url 'staff_order_detail' order.transaction_id %}" class="btn btn-sm btn-info">View Details</a></td> 
+                                    <td><a href="{% url 'customers:staff_order_detail' order.transaction_id %}" class="btn btn-sm btn-info">View Details</a></td> 
                                 </tr>
                                 {% endfor %}
                             </tbody>

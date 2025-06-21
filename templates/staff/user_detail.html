@@ -6,7 +6,7 @@
     <div class="container mt-4">
         <header class="mb-4 d-flex justify-content-between align-items-center">
             <h2 class="card-title">User Details: {{ user_obj.username }}</h2>
-            <a href="{% url 'staff_user_list' %}" class="btn btn-outline-secondary btn-sm">Back to All Users</a>
+            <a href="{% url 'customers:staff_user_list' %}" class="btn btn-outline-secondary btn-sm">Back to All Users</a>
         </header>
 
         {% if messages %}
@@ -106,15 +106,15 @@
                 <div class="text-center">
                     {# Link to user edit view - Restricted to SDM or Superusers #}
                     {% if request.user.is_superuser or request.user.profile and request.user.profile.division and request.user.profile.division.name == "SDM" %}
-                        <a href="{% url 'staff_user_edit' user_obj.pk %}" class="btn btn-primary mr-2">Edit User</a>
+                        <a href="{% url 'customers:staff_user_edit' user_obj.pk %}" class="btn btn-primary mr-2">Edit User</a>
                     {% endif %}
                     {# Link to user orders - Removed 'customers' namespace as it's not defined #}
-                    <a href="{% url 'staff_user_orders' user_obj.pk %}" class="btn btn-info mr-2">View Orders</a>
+                    <a href="{% url 'customers:staff_user_orders' user_obj.pk %}" class="btn btn-info mr-2">View Orders</a>
                     {# Link to user products (if seller) later #}
                     {% if user_obj.profile.user_level.name == "Penjual" %}
                         <a href="#" class="btn btn-info mr-2 disabled">View Products</a>
                     {% endif %}
-                    <a href="{% url 'staff_user_list' %}" class="btn btn-secondary">Back to List</a>
+                    <a href="{% url 'customers:staff_user_list' %}" class="btn btn-secondary">Back to List</a>
                 </div>
 
             </div>

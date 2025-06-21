@@ -61,8 +61,8 @@
                 {% for msg in chat_messages %}
                     <div class="message {% if msg.sender == request.user %}sent{% else %}received{% endif %}">
                         <p class="mb-0">{{ msg.content }}</p>
-                        <small class="text-muted {% if msg.sender == request.user %}float-right{% else %}float-left{% endif %}">
-                            {{ msg.timestamp|date:"P, M d" }}
+                        <small class="text-muted {% if msg.sender == request.user %}float-right{% else %}float-left{% endif %}" title="{{ msg.timestamp|date:"M d, Y, P" }}">
+                            {{ msg.timestamp|date:"P" }}
                         </small>
                     </div>
                     <div style="clear: both;"></div>

@@ -71,7 +71,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 'type': 'chat_message', # This will call the chat_message method
                 'message': message_content,
                 'sender_username': sender_username, 
-                'timestamp': chat_message.timestamp.strftime('%Y-%m-%d %H:%M:%S') # Or any format you prefer
+                'timestamp': chat_message.timestamp.isoformat()
             }
         )
 

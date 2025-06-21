@@ -76,7 +76,7 @@
                             <div class="grid-child my-auto"><h5>Items: <strong id="quantity-item">{{order.get_cart_items}}</strong></h5></div>
                             <div class="grid-child mx-auto my-auto"><h5>Total: <strong>Rp {{order.get_cart_totals|floatformat:2|intcomma}}</strong></h5></div>
                             <div id="alerts" class="hidden mt-2 mb-2">
-                                <p>Anda Harus Log In Agar Dapat Memasukkan Barang Kedalam Keranjang. <a href="{% url 'customer_login' %}">Ketuk Disini Untuk Login</a></p>
+                                <p>Anda Harus Log In Agar Dapat Memasukkan Barang Kedalam Keranjang. <a href="{% url 'customers:customer_login' %}">Ketuk Disini Untuk Login</a></p>
                             </div>
                             <div class="grid-child ml-auto my-auto">
                                 <!-- Button trigger modal -->
