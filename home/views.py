@@ -1,17 +1,16 @@
 from home import models
 from django.shortcuts import render, redirect, get_object_or_404
 from .models import *
-from django.contrib import messages
 from django.core.paginator import Paginator
-from django.contrib.auth.decorators import login_required
-from customers.views import staff_member_required
-from customers.forms import OrderStatusUpdateForm
+from django.contrib.auth.decorators import login_required, user_passes_test
+from django.contrib.auth.models import Group
 import json
 import requests #type: ignore
 from .utils import *
+from django.db.models import Sum, Count
+from django.db.models.functions import TruncMonth
 from django.contrib import messages
-from .forms import ProductForm
-from .forms import ProductImageForm # Import ProductImageForm
+from .forms import ProductForm, ProductImage, ProductImageForm, FormShipping
 from customers.models import SellerProfile
 from customers.views import seller_required
 from django.forms import inlineformset_factory # Import inlineformset_factory
@@ -94,67 +93,37 @@ class ProductDetail(TemplateView):
         return context
 
 @login_required
-@staff_member_required # Or your specific staff decorator
-def staff_order_detail_view(request, order_id):
-    # Use pk or transaction_id based on your URL configuration.
-    # The template uses order.transaction_id for display, but the URL might use pk (id).
-    order = get_object_or_404(Order, id=order_id)
-    order_items = OrderItem.objects.filter(order=order)
-    
-    # ShippingAddress might not exist for every order, handle gracefully.
-    try:
-        # Assuming a OneToOne or ForeignKey from ShippingAddress to Order.
-        # If Order has a ForeignKey to ShippingAddress, it would be order.shippingaddress
-        shipping_address = ShippingAddress.objects.get(order=order)
-    except ShippingAddress.DoesNotExist:
-        shipping_address = None
-    except ShippingAddress.MultipleObjectsReturned:
-        # Handle case if multiple shipping addresses are linked, though ideally this shouldn't happen.
-        shipping_address = ShippingAddress.objects.filter(order=order).first()
-
-
-    if request.method == 'POST':
-        status_form = OrderStatusUpdateForm(request.POST, instance=order)
-        if status_form.is_valid():
-            status_form.save()
-            messages.success(request, f"Order '{order.transaction_id}' status has been updated successfully.")
-            # Redirect to the same page to show the update and success message.
-            return redirect('staff_order_detail', order_id=order.id)
-        else:
-            messages.error(request, "Failed to update order status. Please review the errors below.")
-    else:
-        status_form = OrderStatusUpdateForm(instance=order)
-
-    context = {
-        'order': order,
-        'order_items': order_items,
-        'shipping_address': shipping_address,
-        'status_form': status_form,
-    }
-    return render(request, 'staff/staff_order_detail.html', context)
-
-@login_required
 def ShippingView(request):
+    """
+    Handles the shipping address form submission.
+    It validates the form, geocodes the address to get coordinates,
+    and saves the shipping address to the session before redirecting to the payment page.
+    """
     context = {}
-    form = FormShipping
-    cart = cartData
-    context.update(cart(request))
+    # Get cart data for the order summary and to link the shipping address
+    context.update(cartData(request))
+
+    # If cart is empty, redirect back to cart page
+    if not context.get('items'):
+        messages.warning(request, "Your cart is empty. Please add items before checking out.")
+        return redirect('homey:cart')
+    
     if request.method == 'POST':
         form = FormShipping(request.POST)
         if form.is_valid():
-            customer = request.user
-            shipping,created = ShippingAddress.objects.get_or_create(
-                user=customer,
-                order=context['order'],
-                email=request.POST.get('email'),
-                kode_pos=request.POST.get('kode_pos'),
-                kota=request.POST.get('kota'),
-                address=request.POST.get('address'),
-            )         
-            shipping.save()
-            CompleteOrder(request)
-            return redirect('homey:index')
-    context['form']=form
+            # Don't save to DB yet, we need to add user and order
+            shipping = form.save(commit=False)
+            shipping.user = request.user
+            shipping.order = context['order']
+            shipping.save() # Save the complete object, now with lat/lon if found.
+            request.session['shipping_address_id'] = shipping.id  # Save shipping ID to session
+            return redirect('homey:payment')
+    else:
+        # Pre-populate form with user's email for convenience
+        form = FormShipping(initial={'email': request.user.email})
+
+    context['form'] = form
+    return render(request, 'home/checkout.html', context)
  
 def fakeStoreAPI():
     # This function will store data from api to django.
@@ -177,6 +146,111 @@ def fakeStoreAPI():
         # except:
         #     print('error gan')
     print('sipp')
+
+@login_required
+def payment_view(request):
+    """
+    Handles payment processing and order confirmation.
+    """
+    shipping_address_id = request.session.get('shipping_address_id')
+    if not shipping_address_id:
+        messages.error(request, "Please enter shipping information first.")
+        return redirect('homey:checkout')
+
+    try:
+        shipping_address = ShippingAddress.objects.get(pk=shipping_address_id, user=request.user)
+        order = Order.objects.get(user=request.user, status__is_default=True)
+        order_items = OrderItem.objects.filter(order=order)
+    except (ShippingAddress.DoesNotExist, Order.DoesNotExist):
+        messages.error(request, "Invalid checkout session. Please try again.")
+        return redirect('homey:checkout')
+
+    if request.method == 'POST':
+        selected_payment_method = request.POST.get('selectedPaymentMethod')
+
+        if selected_payment_method == 'creditCard':
+            # Here you would integrate with a payment gateway (e.g., Stripe, Midtrans, etc.)
+            # For now, we'll simulate success.
+            messages.info(request, "Credit Card payment initiated (simulated).")
+            CompleteOrder(request) # Mark order as complete
+            del request.session['shipping_address_id']
+            messages.success(request, "Payment successful! Your order has been placed.")
+            return redirect('homey:index') # Redirect to a confirmation page later
+        elif selected_payment_method == 'cashOnDelivery':
+            # For COD, simply mark the order as complete and provide instructions.
+            CompleteOrder(request) # Mark order as complete
+            del request.session['shipping_address_id']
+            messages.success(request, "Your order has been placed! Please prepare cash for delivery.")
+            return redirect('homey:index') # Redirect to a confirmation page later
+        elif selected_payment_method == 'eMoney':
+            # For e-money, you might redirect to a page with QR codes or payment instructions.
+            messages.info(request, "E-Money payment selected. Instructions will be provided on the confirmation page.")
+            CompleteOrder(request) # Mark order as complete
+            del request.session['shipping_address_id']
+            messages.success(request, "Your order has been placed! Please follow e-money instructions.")
+            return redirect('homey:index') # Redirect to a confirmation page later
+        else:
+            messages.error(request, "Invalid payment method selected.")
+            return redirect('homey:payment') # Stay on payment page
+    context = {
+        'shipping_address': shipping_address,
+        'order': order,
+        'order_items': order_items,
+    }
+    return render(request, 'home/payment.html', context)
+
+# --- Dashboard & Statistics ---
+
+def check_is_pimpinan(user):
+    """
+    Checks if the user is a staff member and belongs to the 'Pimpinan' division.
+    """
+    # User must be a Django staff user first.
+    if not user.is_staff:
+        return False
+    try:
+        # This checks if the user's profile is linked to the 'Pimpinan' division.
+        # It assumes a Profile model is linked to your User model (e.g., user.profile)
+        # and that the Profile has a ForeignKey to a Division model.
+        return user.profile.division.name == 'Pimpinan'
+    except AttributeError:
+        # This handles cases where user.profile doesn't exist, or user.profile.division is None.
+        return False
+
+@login_required
+@user_passes_test(check_is_pimpinan)
+def dashboard_statistik(request):
+    """
+    View for the analytics dashboard, accessible only by 'Pimpinan'.
+    """
+    # Data for Pie Chart: Sales by Category
+    category_sales = OrderItem.objects.filter(order__complete=True)\
+        .values('product__category__name')\
+        .annotate(total_sales=Sum('get_total'))\
+        .order_by('-total_sales')
+
+    # Data for Line Chart: Sales per month
+    sales_per_month = Order.objects.filter(complete=True)\
+        .annotate(month=TruncMonth('date_ordered'))\
+        .values('month')\
+        .annotate(total_sales=Sum('get_cart_totals'))\
+        .order_by('month')
+
+    # Data for Bar Chart: Top 5 Best-Selling Products
+    top_products = OrderItem.objects.filter(order__complete=True)\
+        .values('product__name')\
+        .annotate(total_quantity=Sum('quantity'))\
+        .order_by('-total_quantity')[:5]
+
+    context = {
+        'pie_chart_labels': json.dumps([item['product__category__name'] for item in category_sales]),
+        'pie_chart_data': json.dumps([float(item['total_sales']) for item in category_sales]),
+        'line_chart_labels': json.dumps([s['month'].strftime('%B %Y') for s in sales_per_month]),
+        'line_chart_data': json.dumps([float(s['total_sales']) for s in sales_per_month]),
+        'bar_chart_labels': json.dumps([p['product__name'] for p in top_products]),
+        'bar_chart_data': json.dumps([p['total_quantity'] for p in top_products]),
+    }
+    return render(request, 'home/dashboard.html', context)
 
 
 @login_required

@@ -144,8 +144,11 @@ class ShippingAddress(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank= True)
     order = models.ForeignKey(Order, null=True, on_delete=models.SET_NULL, blank=True)
     email = models.EmailField(max_length=200,null=True)
-    kota = models.CharField(max_length=255,default='bogor')
+    kota = models.CharField(max_length=255, null=True)
+    kode_pos = models.CharField(max_length=10, null=True, blank=True)
     address = models.CharField(max_length=255, null=True)
+    latitude = models.FloatField(null=True, blank=True)
+    longitude = models.FloatField(null=True, blank=True)
     date_added = models.DateTimeField(auto_now_add=True)
     
     def __str__(self):

@@ -79,33 +79,9 @@
                                 <p>Anda Harus Log In Agar Dapat Memasukkan Barang Kedalam Keranjang. <a href="{% url 'customers:customer_login' %}">Ketuk Disini Untuk Login</a></p>
                             </div>
                             <div class="grid-child ml-auto my-auto">
-                                <!-- Button trigger modal -->
-                                <!-- <a class="btn checkout btn-outline-danger" href="{% url 'homey:checkout' %}">Checkout</a> -->
-                                <button type="button" class="btn checkout btn-outline-primary" data-toggle="modal" data-target="#exampleModal">
-                                    Checkout
-                                </button>
+                                <a class="btn checkout btn-outline-primary" href="{% url 'homey:checkout' %}">Checkout</a>
                             </div>
                         </div>
-                        <!-- Modal -->
-                        <div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
-                            <div class="modal-dialog  modal-dialog-centered">
-                            <div class="modal-content">
-                                <div class="modal-header">
-                                <h5 class="modal-title" id="exampleModalLabel">Mohon Maaf</h5>
-                                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                                    <span aria-hidden="true">&times;</span>
-                                </button>
-                                </div>
-                                <div class="modal-body">
-                                <p>
-                                    Checkout saat ini belum bisa digunakan karena web sedang dalam pengembangan :(
-                                </p>
-                                </div>
-                                <div class="modal-footer">
-                                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-                                </div>
-                            </div>
-                            </div>
                         </div>
                     </div>
                     <br>

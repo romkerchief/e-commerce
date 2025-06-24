@@ -1,6 +1,7 @@
 import json
 from channels.generic.websocket import AsyncWebsocketConsumer #type:ignore
 from channels.db import database_sync_to_async #type:ignore
+import logging
 from django.contrib.auth.models import User
 from .models import ChatSession, ChatMessage
 
@@ -9,6 +10,9 @@ class ChatConsumer(AsyncWebsocketConsumer):
     WebSocket consumer for handling real time chat.
     each instance of consumer handles a specific chat session's connection
     """
+    # Get an instance of a logger
+    logger = logging.getLogger(__name__)
+
     async def connect(self):
         """
         called when a WebSocket connection is attempted.
@@ -57,23 +61,36 @@ class ChatConsumer(AsyncWebsocketConsumer):
         called when a message is recieved.
         parse the message, save it to the database, broadcast it to the chat room.
         """
-        text_data_json = json.loads(text_data)
-        message_content = text_data_json['message']
-        sender_username = self.user.username
+        try:
+            text_data_json = json.loads(text_data)
+            message_content = text_data_json['message']
+            sender_username = self.user.username
 
-        # Save message to database
-        chat_message = await self.save_message(self.session_id, self.user, message_content)
+            self.logger.info(f"Received message: '{message_content}' from {sender_username} for session {self.session_id}")
 
-        # Send message to room group
-        await self.channel_layer.group_send(
-            self.chat_room_group_name,
-            {
-                'type': 'chat_message', # This will call the chat_message method
-                'message': message_content,
-                'sender_username': sender_username, 
-                'timestamp': chat_message.timestamp.isoformat()
-            }
-        )
+            # Save message to database
+            chat_message = await self.save_message(self.session_id, self.user, message_content)
+            self.logger.info(f"Message from {sender_username} saved to DB with ID: {chat_message.id}")
+
+            # Send message to room group
+            await self.channel_layer.group_send(
+                self.chat_room_group_name,
+                {
+                    'type': 'chat_message', # This will call the chat_message method
+                    'message': message_content,
+                    'sender_username': sender_username,
+                    'timestamp': chat_message.timestamp.isoformat()
+                }
+            )
+            self.logger.info(f"Message from {sender_username} broadcasted to group {self.chat_room_group_name}")
+
+        except json.JSONDecodeError:
+            self.logger.error(f"Failed to decode JSON from WebSocket: {text_data}")
+        except KeyError:
+            self.logger.error(f"Received JSON without 'message' key: {text_data}")
+        except Exception as e:
+            # Log any other exceptions, which is crucial for debugging async code
+            self.logger.error(f"An unexpected error occurred in receive method for session {self.session_id}: {e}", exc_info=True)
 
     async def chat_message(self, event):
         """

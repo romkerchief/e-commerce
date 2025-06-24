@@ -1,5 +1,5 @@
 from django import forms
-from .models import Product, ProductImage # Assuming ProductImage might be used later
+from .models import Product, ProductImage, ShippingAddress
 
 class ProductForm(forms.ModelForm):
     class Meta:
@@ -25,4 +25,22 @@ class ProductImageForm(forms.ModelForm):
         fields = ['image']
         widgets = {
             'image': forms.ClearableFileInput(attrs={'class': 'form-control-file mb-2'}),
+        }
+
+class FormShipping(forms.ModelForm):
+    class Meta:
+        model = ShippingAddress
+        # Exclude user and order as they are set in the view
+        fields = ['email', 'kota', 'address', 'kode_pos']
+        widgets = {
+            'email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'your.email@example.com'}),
+            'kota': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'City/Town'}),
+            'address': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'kode_pos': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Postal Code'}),
+        }
+        help_texts = {
+            'address': 'Example: Jl. Merdeka No. 17, RT 05/RW 02, Kel. Sukajadi, Kec. Sukasari',
+        }
+        labels = {
+            'kode_pos': 'Postal Code'
         }

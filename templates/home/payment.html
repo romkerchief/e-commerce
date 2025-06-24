@@ -1,0 +1,221 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block style %}
+<style>
+    .checkout-steps {
+        display: flex;
+        justify-content: space-around;
+        list-style: none;
+        padding: 0;
+        margin-bottom: 2rem;
+    }
+    .checkout-steps .step.active {
+        color: #007bff;
+        font-weight: bold;
+    }
+            .form-check-input {
+            display: none; /* Hide the radio button */
+        }
+        .payment-options {
+            display: flex;
+            flex-direction: row;
+            gap: 10px;
+        }
+        .form-check-label {
+            display: inline-block;
+            width: 100%; /* Full width */
+            max-width: 300px; /* Same maximum width for all */
+            padding: 15px 20px;
+            border: 2px solid #007bff;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+            box-sizing: border-box;
+        }
+        .form-check-input:checked + .form-check-label {
+            background-color: #007bff;
+            color: white;
+            box-shadow: 0 0 10px rgba(0, 123, 255, 0.5):}
+</style>
+{% endblock style %}
+
+{% block content %}
+
+<section class="under-nav">
+  <div class="container bg-light pb-4 pt-4">
+    <header class="mb-4">
+        <h2 class="text-center">Checkout</h2>
+    </header>
+
+    <!-- Checkout Steps -->
+    <ul class="checkout-steps">
+        <li class="step text-muted">1. Shipping Address</li>
+        <li class="step active">2. Payment</li>
+        <li class="step text-muted">3. Confirmation</li>
+    </ul>
+
+    <div class="row">
+        <div class="col-lg-7 pb-4">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>Payment Method</h5>
+                </div>
+                <div class="card-body">
+                    <div class="payment-options">
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="radio" name="paymentMethod" id="creditCard" value="creditCard" checked>
+                            <label class="form-check-label" for="creditCard">
+                                Credit/Debit Card
+                            </label>
+                        </div>
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="radio" name="paymentMethod" id="cashOnDelivery" value="cashOnDelivery">
+                            <label class="form-check-label" for="cashOnDelivery">
+                                Cash on Delivery (COD)
+                            </label>
+                        </div>
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="radio" name="paymentMethod" id="eMoney" value="eMoney">
+                            <label class="form-check-label" for="eMoney">
+                                E-Money (GoPay, OVO, Dana, LinkAja)
+                            </label>
+                        </div>
+                    </div>
+                    <div id="creditCardDetails">
+                        <div class="form-group">
+                            <label for="cardNumber">Card Number</label>
+                            <input type="text" class="form-control" id="cardNumber" placeholder="**** **** **** ****" required>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group col-md-6">
+                                <label for="expiryDate">Expiry Date</label>
+                                <input type="text" class="form-control" id="expiryDate" placeholder="MM/YY" required>
+                            </div>
+                            <div class="form-group col-md-6">
+                                <label for="cvc">CVC</label>
+                                <input type="text" class="form-control" id="cvc" placeholder="***" required>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="cardName">Name on Card</label>
+                            <input type="text" class="form-control" id="cardName" placeholder="Full Name" required>
+                        </div>
+                    </div>
+                    
+                    <div id="cashOnDeliveryDetails" style="display:none;">
+                        <p class="text-muted">Pay with cash when your order is delivered to your address.</p>
+                        <p class="text-danger">Please ensure you have the exact amount ready for the courier.</p>
+                    </div>
+
+
+                    <div id="eMoneyDetails" style="display:none;">
+                        <p class="text-muted">Scan the QR code or transfer to the provided number using your preferred e-money app.</p>
+                        <ul class="list-unstyled">
+                            <li><i class="fas fa-qrcode"></i> GoPay: Scan QR Code (details on next page)</li>
+                            <li><i class="fas fa-qrcode"></i> OVO: Scan QR Code (details on next page)</li>
+                            <li><i class="fas fa-qrcode"></i> Dana: Scan QR Code (details on next page)</li>
+                            <li><i class="fas fa-qrcode"></i> LinkAja: Scan QR Code (details on next page)</li>
+                        </ul>
+                        <p class="text-info">Specific payment instructions and QR codes will be displayed on the confirmation page after clicking "Pay Now".</p>
+                    </div>
+
+                    <!-- Hidden input to store selected payment method for backend -->
+                    <input type="hidden" name="selectedPaymentMethod" id="selectedPaymentMethod" value="creditCard">
+                </div>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>Shipping Address</h5>
+                </div>
+                <div class="card-body">
+                    <p class="mb-1">{{ shipping_address.address }}</p>
+                    <p class="mb-1">{{ shipping_address.kota }}</p>
+                    <p class="mb-1">Postal Code: {{ shipping_address.kode_pos|default:"N/A" }}</p>
+                    <p class="mb-0">Email: {{ shipping_address.email }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-5">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Order Summary</h5>
+                </div>
+                <div class="card-body">
+                    {% for item in order_items %}
+                        <div class="row mb-3 align-items-center">
+                            <div class="col-3">
+                                <img class="img-fluid rounded" src="{{ item.product.imageURL }}" alt="{{ item.product.name }}">
+                            </div>
+                            <div class="col-6">
+                                <h6 class="my-0">{{ item.product.name }}</h6>
+                                <small class="text-muted">Qty: {{ item.quantity }}</small>
+                            </div>
+                            <div class="col-3 text-right">
+                                <span class="text-muted">Rp{{ item.get_total|floatformat:0|intcomma }}</span>
+                            </div>
+                        </div>
+                    {% endfor %}
+                    <hr>
+                    <div class="d-flex justify-content-between">
+                        <span>Total Items</span>
+                        <strong>{{ order.get_cart_items }}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between mt-2">
+                        <h5>Total</h5>
+                        <h5><strong>Rp {{ order.get_cart_totals|floatformat:0|intcomma }}</strong></h5>
+                    </div>
+                    <hr>
+                    <form method="POST">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-primary btn-block">Pay Now</button>
+                    </form>
+                    <a href="{% url 'homey:checkout' %}" class="btn btn-secondary btn-block mt-2">Back to Shipping</a>
+                </div>
+            </div>
+        </div>
+    </div>
+  </div>
+</section>
+
+{% endblock content %}
+
+{% block script %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const paymentMethodRadios = document.querySelectorAll('input[name="paymentMethod"]');
+        const creditCardDetails = document.getElementById('creditCardDetails');
+        const cashOnDeliveryDetails = document.getElementById('cashOnDeliveryDetails');
+        const eMoneyDetails = document.getElementById('eMoneyDetails');
+        const selectedPaymentMethodInput = document.getElementById('selectedPaymentMethod');
+
+        function showSelectedPaymentMethodDetails() {
+            const selectedValue = document.querySelector('input[name="paymentMethod"]:checked').value;
+            
+            creditCardDetails.style.display = 'none';
+            cashOnDeliveryDetails.style.display = 'none';
+            eMoneyDetails.style.display = 'none';
+
+            if (selectedValue === 'creditCard') {
+                creditCardDetails.style.display = 'block';
+            } else if (selectedValue === 'cashOnDelivery') {
+                cashOnDeliveryDetails.style.display = 'block';
+            } else if (selectedValue === 'eMoney') {
+                eMoneyDetails.style.display = 'block';
+            }
+            selectedPaymentMethodInput.value = selectedValue; // Update hidden input for backend
+        }
+
+        // Add event listeners to all radio buttons
+        paymentMethodRadios.forEach(radio => {
+            radio.addEventListener('change', showSelectedPaymentMethodDetails);
+        });
+
+        // Show details for the initially checked radio button on page load
+        showSelectedPaymentMethodDetails();
+    });
+</script>
+{% endblock script %}

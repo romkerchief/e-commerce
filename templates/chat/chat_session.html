@@ -28,14 +28,33 @@
         border-radius: 20px;
         max-width: 70%;
     }
+    /* Styles for timestamps within sent messages */
+    .message.sent small {
+        color: #fff; /* A very light gray for good contrast on blue */
+        opacity: 1 !important; /* Override any opacity from .text-muted */
+        display: block; /* Ensure it takes its own line */
+        text-align: right; /* Align to the right within the bubble */
+        font-size: 0.8em; /* Slightly smaller for timestamps */
+        margin-top: 5px; /* Small space from message content */
+    }
     .message.sent {
-        background-color: #007bff;
+        background-color: #00c8ff;
         color: white;
-        margin-left: auto;
+        float: right;
         border-bottom-right-radius: 5px;
+    }
+    /* Styles for timestamps within received messages */
+    .message.received small {
+        color: #6c757d; /* Standard muted color for received, or slightly darker */
+        opacity: 1 !important; /* Override any opacity from .text-muted */
+        display: block;
+        text-align: left;
+        font-size: 0.8em;
+        margin-top: 5px;
     }
     .message.received {
         background-color: #e9ecef;
+        float: left; /* Align received messages to the left */
         color: #333;
         border-bottom-left-radius: 5px;
     }
@@ -61,11 +80,9 @@
                 {% for msg in chat_messages %}
                     <div class="message {% if msg.sender == request.user %}sent{% else %}received{% endif %}">
                         <p class="mb-0">{{ msg.content }}</p>
-                        <small class="text-muted {% if msg.sender == request.user %}float-right{% else %}float-left{% endif %}" title="{{ msg.timestamp|date:"M d, Y, P" }}">
-                            {{ msg.timestamp|date:"P" }}
-                        </small>
+                        <small class="text-muted message-timestamp" data-timestamp="{{ msg.timestamp.isoformat }}">{{ msg.timestamp|date:"P" }}</small>
                     </div>
-                    <div style="clear: both;"></div>
+                    <div style="clear: both;"></div> {# Add a clearing div after each message #}
                 {% empty %}
                     <p>No messages yet. Start the conversation!</p>
                 {% endfor %}
@@ -94,10 +111,42 @@
         const sessionId = sectionElement.dataset.sessionId;
         const currentUserUsername = sectionElement.dataset.currentUser;
 
+         /**
+         * Formats an ISO timestamp string into a format similar to Django's 'P' filter (e.g., "4:30 p.m.").
+         * @param {string} isoString - The timestamp in ISO format.
+         * @returns {string} The formatted time string.
+         */
+        function formatTime(isoString) {
+            const date = new Date(isoString);
+            let hours = date.getHours();
+            const minutes = date.getMinutes().toString().padStart(2, '0');
+            const ampm = hours >= 12 ? 'p.m.' : 'a.m.';
+            hours = hours % 12;
+            hours = hours || 12; // Handle midnight (0) as 12 a.m.
+            return `${hours}:${minutes} ${ampm}`;
+        }
+
+        /**
+         * Formats an ISO timestamp string for the hover title, similar to Django's "M d, Y, P" filter.
+         * @param {string} isoString - The timestamp in ISO format.
+         * @returns {string} The formatted date and time string for the title attribute.
+         */
+        function formatTitle(isoString) {
+            const date = new Date(isoString);
+            return date.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
+        }
+
         // Scroll to the bottom of the chat messages
         function scrollToBottom() {
             chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight;
         }
+            document.querySelectorAll('.message-timestamp').forEach(function(smallElement) {
+                const isoTimestamp = smallElement.dataset.timestamp;
+                if (isoTimestamp) {
+                    smallElement.textContent = formatTime(isoTimestamp);
+                    smallElement.title = formatTitle(isoTimestamp);
+                }
+            });
         scrollToBottom();
 
         const chatSocket = new WebSocket(
@@ -130,15 +179,16 @@
 
             const small = document.createElement('small');
             small.classList.add('text-muted');
-            small.classList.add(data.sender_username === currentUserUsername ? 'float-right' : 'float-left');
-            small.textContent = new Date(data.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); // Simple time format
+            small.title = formatTitle(data.timestamp);
+            small.textContent = formatTime(data.timestamp);
             messageDiv.appendChild(small);
+
+            chatMessagesContainer.appendChild(messageDiv);
 
             const clearer = document.createElement('div');
             clearer.style.clear = 'both';
+            chatMessagesContainer.appendChild(clearer); {# Add a clearing div after each new message #}
 
-            chatMessagesContainer.appendChild(messageDiv);
-            chatMessagesContainer.appendChild(clearer);
             scrollToBottom();
         };
 
