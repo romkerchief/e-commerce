@@ -48,7 +48,18 @@
                 <a href="{% url 'customers:staff_user_list' %}" class="list-group-item list-group-item-action">User Management</a>
             {% endif %}
         </div>
-
+        {% if user.is_superuser or user.profile.division.name == 'Pimpinan' %}
+        <div class="card mb-4 border-primary">
+            <div class="card-header text-white bg-primary">
+                Pimpinan Tools
+            </div>
+            <div class="card-body">
+                <h5 class="card-title">Management Analytics</h5>
+                <p class="card-text">View key performance indicators and business statistics for decision-making.</p>
+                <a href="{% url 'customers:pimpinan_dashboard' %}" class="btn btn-primary">Go to Leadership Dashboard</a>
+            </div>
+        </div>
+        {% endif %}
     </div>
 </section>
 {% endblock content %}

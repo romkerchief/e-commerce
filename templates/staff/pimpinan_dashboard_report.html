@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Pimpinan Dashboard Report</title>
+    <style>
+        body { font-family: sans-serif; }
+        h1 { color: #333; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+        th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+    </style>
+</head>
+<body>
+    <h1>Pimpinan Dashboard Report</h1>
+    <p>Generated on: {% now "d F Y H:i" %}</p>
+
+    <h2>Sales by Category (by Quantity)</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Category</th>
+                <th>Items Sold</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in sales_per_category %}
+            <tr>
+                <td>{{ item.labels }}</td>
+                <td>{{ item.data }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <h2>Total Items Sold per Month</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Month</th>
+                <th>Total Items Sold</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in monthly_sales %}
+            <tr>
+                <td>{{ item.labels }}</td>
+                <td>{{ item.data }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <h2>Top 5 Best-Selling Products</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Product</th>
+                <th>Quantity Sold</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in top_products %}
+            <tr>
+                <td>{{ item.labels }}</td>
+                <td>{{ item.data }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>

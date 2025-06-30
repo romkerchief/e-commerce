@@ -91,39 +91,6 @@ class ProductDetail(TemplateView):
         prod_list = paginator.get_page(None)
         context['product_list']=prod_list
         return context
-
-@login_required
-def ShippingView(request):
-    """
-    Handles the shipping address form submission.
-    It validates the form, geocodes the address to get coordinates,
-    and saves the shipping address to the session before redirecting to the payment page.
-    """
-    context = {}
-    # Get cart data for the order summary and to link the shipping address
-    context.update(cartData(request))
-
-    # If cart is empty, redirect back to cart page
-    if not context.get('items'):
-        messages.warning(request, "Your cart is empty. Please add items before checking out.")
-        return redirect('homey:cart')
-    
-    if request.method == 'POST':
-        form = FormShipping(request.POST)
-        if form.is_valid():
-            # Don't save to DB yet, we need to add user and order
-            shipping = form.save(commit=False)
-            shipping.user = request.user
-            shipping.order = context['order']
-            shipping.save() # Save the complete object, now with lat/lon if found.
-            request.session['shipping_address_id'] = shipping.id  # Save shipping ID to session
-            return redirect('homey:payment')
-    else:
-        # Pre-populate form with user's email for convenience
-        form = FormShipping(initial={'email': request.user.email})
-
-    context['form'] = form
-    return render(request, 'home/checkout.html', context)
  
 def fakeStoreAPI():
     # This function will store data from api to django.
@@ -146,58 +113,6 @@ def fakeStoreAPI():
         # except:
         #     print('error gan')
     print('sipp')
-
-@login_required
-def payment_view(request):
-    """
-    Handles payment processing and order confirmation.
-    """
-    shipping_address_id = request.session.get('shipping_address_id')
-    if not shipping_address_id:
-        messages.error(request, "Please enter shipping information first.")
-        return redirect('homey:checkout')
-
-    try:
-        shipping_address = ShippingAddress.objects.get(pk=shipping_address_id, user=request.user)
-        order = Order.objects.get(user=request.user, status__is_default=True)
-        order_items = OrderItem.objects.filter(order=order)
-    except (ShippingAddress.DoesNotExist, Order.DoesNotExist):
-        messages.error(request, "Invalid checkout session. Please try again.")
-        return redirect('homey:checkout')
-
-    if request.method == 'POST':
-        selected_payment_method = request.POST.get('selectedPaymentMethod')
-
-        if selected_payment_method == 'creditCard':
-            # Here you would integrate with a payment gateway (e.g., Stripe, Midtrans, etc.)
-            # For now, we'll simulate success.
-            messages.info(request, "Credit Card payment initiated (simulated).")
-            CompleteOrder(request) # Mark order as complete
-            del request.session['shipping_address_id']
-            messages.success(request, "Payment successful! Your order has been placed.")
-            return redirect('homey:index') # Redirect to a confirmation page later
-        elif selected_payment_method == 'cashOnDelivery':
-            # For COD, simply mark the order as complete and provide instructions.
-            CompleteOrder(request) # Mark order as complete
-            del request.session['shipping_address_id']
-            messages.success(request, "Your order has been placed! Please prepare cash for delivery.")
-            return redirect('homey:index') # Redirect to a confirmation page later
-        elif selected_payment_method == 'eMoney':
-            # For e-money, you might redirect to a page with QR codes or payment instructions.
-            messages.info(request, "E-Money payment selected. Instructions will be provided on the confirmation page.")
-            CompleteOrder(request) # Mark order as complete
-            del request.session['shipping_address_id']
-            messages.success(request, "Your order has been placed! Please follow e-money instructions.")
-            return redirect('homey:index') # Redirect to a confirmation page later
-        else:
-            messages.error(request, "Invalid payment method selected.")
-            return redirect('homey:payment') # Stay on payment page
-    context = {
-        'shipping_address': shipping_address,
-        'order': order,
-        'order_items': order_items,
-    }
-    return render(request, 'home/payment.html', context)
 
 # --- Dashboard & Statistics ---
 
@@ -380,3 +295,127 @@ def store_detail_view(request, store_slug):
         # Handle case where store slug doesn't exist, maybe redirect to a 404 page or homepage
         messages.error(request, "The requested store does not exist.")
         return redirect('homey:index')
+
+@login_required
+def cart(request):
+    """
+    This is the new dedicated view for the shopping cart.
+    """
+    try:
+        # We look for an order with the default "in cart" status
+        cart_status = OrderStatus.objects.get(is_default=True)
+        order = Order.objects.get(user=request.user, status=cart_status)
+        items = order.orderitem_set.all()
+    except (OrderStatus.DoesNotExist, Order.DoesNotExist):
+        # If the user has no active cart, we create placeholder objects to avoid errors
+        order = {'get_cart_totals': 0, 'get_cart_items': 0}
+        items = []
+        messages.info(request, "Your cart is currently empty.")
+        
+    context = {'items': items, 'order': order}
+    return render(request, 'home/cart.html', context)
+
+# In home/views.py
+@login_required
+def checkout(request):
+    """
+    Step 1 of Checkout: Collect Shipping Information
+    """
+    try:
+        # THE FIX IS ON THIS LINE: Use is_default=True instead of a hardcoded name
+        cart_status = OrderStatus.objects.get(is_default=True)
+        order = Order.objects.get(user=request.user, status=cart_status)
+        items = order.orderitem_set.all()
+
+        if items.count() == 0:
+            messages.warning(request, "Your cart is empty. Please add items before checking out.")
+            return redirect('homey:cart')
+    except (OrderStatus.DoesNotExist, Order.DoesNotExist):
+        messages.error(request, "You do not have an active order.")
+        return redirect('homey:cart')
+
+    # The rest of the function remains the same
+    if request.method == 'POST':
+        form = FormShipping(request.POST)
+        if form.is_valid():
+            request.session['shipping_address'] = form.cleaned_data
+            return redirect('homey:payment')
+    else:
+        # Check if shipping address is already in the session from a previous step
+        if 'shipping_address' in request.session:
+            form = FormShipping(initial=request.session['shipping_address'])
+        else:
+            # If not, initialize with the user's email as a default
+            form = FormShipping(initial={'email': request.user.email})
+        
+    context = {'form': form, 'items': items, 'order': order}
+    return render(request, 'home/checkout.html', context)
+
+@login_required
+def process_payment(request):
+    """
+    Step 2 of Checkout: Choose Payment and Finalize Order
+    """
+    try:
+        # THE FIX IS ON THIS LINE: Use is_default=True here as well for consistency
+        cart_status = OrderStatus.objects.get(is_default=True)
+        order = Order.objects.get(user=request.user, status=cart_status)
+        order_items = order.orderitem_set.all()
+    except (OrderStatus.DoesNotExist, Order.DoesNotExist):
+        messages.error(request, "Your cart is empty or the order could not be found.")
+        return redirect('homey:cart')
+    
+    # The rest of the function remains the same
+    shipping_address_data = request.session.get('shipping_address')
+    if not shipping_address_data:
+        messages.error(request, "Shipping address is missing. Please fill it out first.")
+        return redirect('homey:checkout')
+
+    if request.method == 'POST':
+        # ... all the POST logic is correct and stays the same ...
+        shipping_address = ShippingAddress.objects.create(
+            user=request.user,
+            order=order,
+            address=shipping_address_data['address'],
+            kota=shipping_address_data['kota'],
+            kode_pos=shipping_address_data['kode_pos'],
+            email=shipping_address_data['email']
+        )
+        
+        processing_status, _ = OrderStatus.objects.get_or_create(name="Processing")
+        order.status = processing_status
+        order.save()
+
+        # Pass the payment method to the confirmation page via a temporary session key
+        # and clear the shipping address data now that it's saved to the database.
+        request.session['last_order_payment_method'] = request.POST.get('paymentMethod')
+        if 'shipping_address' in request.session:
+            del request.session['shipping_address']
+
+        return redirect('homey:order_confirmation', transaction_id=order.transaction_id)
+
+    context = {
+        'order': order, 
+        'order_items': order_items, 
+        'shipping_address': shipping_address_data
+    }
+    return render(request, 'home/payment.html', context)
+
+@login_required
+def order_confirmation(request, transaction_id):
+    """
+    Step 3: Show a "Thank You" page and mock QR code if needed.
+    """
+    try:
+        order = Order.objects.get(user=request.user, transaction_id=transaction_id)
+    except Order.DoesNotExist:
+        messages.error(request, "Order not found.")
+        return redirect('homey:index')
+
+    # Pop the payment method from the session.
+    # .pop() gets the value and deletes the key in one atomic operation.
+    # It returns None if the key doesn't exist (e.g., if the user revisits the page).
+    payment_method = request.session.pop('last_order_payment_method', None)
+
+    context = {'order': order, 'payment_method': payment_method}
+    return render(request, 'home/order_confirmation.html', context)

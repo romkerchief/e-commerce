@@ -6,23 +6,24 @@
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">	
-<link href="https://fonts.googleapis.com/css2?family=Orelega+One&family=Roboto&family=Viga&display=swap" rel="stylesheet">
+	<link href="https://fonts.googleapis.com/css2?family=Orelega+One&family=Roboto&family=Viga&display=swap" rel="stylesheet">
 	{% include "snippets/styles.html" %}
 	<link href='https://unpkg.com/boxicons@2.1.2/css/boxicons.min.css' rel='stylesheet'>
 	<link rel="stylesheet" href="{% static "ui.css" %}">
 	<link rel="stylesheet" href="{% static "style.css" %}">
 	<link rel="shortcut icon" type="image/x-icon" href="{% static 'images/favicon.ico' %}">
 
-	<style>
-		.hidden {
-            display: none!important;
-        }
-		.navbar-brand {
-			font-family: 'Viga', sans-serif;
-		}
-	</style>
+<style>
+	.hidden {
+        display: none!important;
+    }
+	.navbar-brand {
+		font-family: 'Viga', sans-serif;
+	}
+</style>
+
+
 	{% block style %}
-	
 	{% endblock style %}
 	<script type="text/javascript">
 		var user = '{{request.user}}'
@@ -133,23 +134,32 @@
 <script src="https://kit.fontawesome.com/47a5254e53.js" crossorigin="anonymous"></script>
 <script type="text/javascript" src="{% static "js/cart.js" %}"></script>
 <script type="text/javascript">
-	var user = '{{user}}'
-	console.log(user)
-	if(user != 'AnonymousUser'){
-		document.getElementById('register-btn').classList.add('hidden')
-		document.getElementById('login-btn').classList.add('hidden')
-		console.log('bruh1')
-		document.getElementById('logout-btn').classList.remove('hidden')
-	}
+    var user = '{{user}}'; // This variable is still available for other scripts if needed
 
-	const queryString = window.location.search;
-	console.log(queryString);
+    // This logic now safely checks if the elements exist before trying to change them.
+    if (user !== 'AnonymousUser') {
+        const registerBtn = document.getElementById('register-btn');
+        if (registerBtn) {
+            registerBtn.style.display = 'none'; // A direct way to hide it
+        }
+
+        const loginBtn = document.getElementById('login-btn');
+        if (loginBtn) {
+            loginBtn.style.display = 'none';
+        }
+    } else {
+        // If the user IS Anonymous, hide the logout button
+        const logoutBtn = document.getElementById('logout-btn');
+        if (logoutBtn) {
+            logoutBtn.style.display = 'none';
+        }
+    }
 </script>
 <!-- Bootstrap JS, Popper.js, jQuery -->
 <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/date-fns@2/index.min.js"></script>
 
-{% block script %}
-	
-{% endblock script %}
 {% include "snippets/scripts.html" %}
+{% block script %}
+{% endblock script %}
 </html>

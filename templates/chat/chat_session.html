@@ -82,7 +82,7 @@
                         <p class="mb-0">{{ msg.content }}</p>
                         <small class="text-muted message-timestamp" data-timestamp="{{ msg.timestamp.isoformat }}">{{ msg.timestamp|date:"P" }}</small>
                     </div>
-                    <div style="clear: both;"></div> {# Add a clearing div after each message #}
+                    <div style="clear: both;"></div>
                 {% empty %}
                     <p>No messages yet. Start the conversation!</p>
                 {% endfor %}
@@ -103,119 +103,95 @@
 
 {% block script %}
 <script>
-    document.addEventListener('DOMContentLoaded', function () {
-        const chatMessagesContainer = document.getElementById('chat-messages-container');
-        const messageForm = document.getElementById('chat-message-form');
-        const messageInput = document.getElementById('chat-message-input');
-        const sectionElement = document.querySelector('.under-nav'); // Or a more specific element holding data attributes
-        const sessionId = sectionElement.dataset.sessionId;
-        const currentUserUsername = sectionElement.dataset.currentUser;
+document.addEventListener('DOMContentLoaded', function () {
+    // --- Get page elements ---
+    const chatMessagesContainer = document.getElementById('chat-messages-container');
+    const messageForm = document.getElementById('chat-message-form');
+    const messageInput = document.getElementById('chat-message-input');
+    const sectionElement = document.querySelector('.under-nav');
+    const sessionId = sectionElement.dataset.sessionId;
+    const currentUserUsername = sectionElement.dataset.currentUser;
 
-         /**
-         * Formats an ISO timestamp string into a format similar to Django's 'P' filter (e.g., "4:30 p.m.").
-         * @param {string} isoString - The timestamp in ISO format.
-         * @returns {string} The formatted time string.
-         */
-        function formatTime(isoString) {
-            const date = new Date(isoString);
-            let hours = date.getHours();
-            const minutes = date.getMinutes().toString().padStart(2, '0');
-            const ampm = hours >= 12 ? 'p.m.' : 'a.m.';
-            hours = hours % 12;
-            hours = hours || 12; // Handle midnight (0) as 12 a.m.
-            return `${hours}:${minutes} ${ampm}`;
-        }
+    function scrollToBottom() {
+        chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight;
+    }
 
-        /**
-         * Formats an ISO timestamp string for the hover title, similar to Django's "M d, Y, P" filter.
-         * @param {string} isoString - The timestamp in ISO format.
-         * @returns {string} The formatted date and time string for the title attribute.
-         */
-        function formatTitle(isoString) {
-            const date = new Date(isoString);
-            return date.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
-        }
+    function formatTime(isoString) {
+        // This correctly converts the server's UTC time to the user's browser time
+        const date = new Date(isoString);
+        let hours = date.getHours();
+        const minutes = date.getMinutes().toString().padStart(2, '0');
+        const ampm = hours >= 12 ? 'p.m.' : 'a.m.';
+        hours = hours % 12;
+        hours = hours || 12; // Convert 0 hour to 12
+        return `${hours}:${minutes} ${ampm}`;
+    }
 
-        // Scroll to the bottom of the chat messages
-        function scrollToBottom() {
-            chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight;
-        }
-            document.querySelectorAll('.message-timestamp').forEach(function(smallElement) {
-                const isoTimestamp = smallElement.dataset.timestamp;
-                if (isoTimestamp) {
-                    smallElement.textContent = formatTime(isoTimestamp);
-                    smallElement.title = formatTitle(isoTimestamp);
-                }
-            });
-        scrollToBottom();
-
-        const chatSocket = new WebSocket(
-            (window.location.protocol === 'https:' ? 'wss://' : 'ws://') +
-            window.location.host +
-            '/ws/chat/' +
-            sessionId +
-            '/'
-        );
-
-        chatSocket.onopen = function(e) {
-            console.log('Chat socket connected successfully');
-        };
-
-        chatSocket.onmessage = function (e) {
-            const data = JSON.parse(e.data);
-            console.log("Received data from WebSocket:", data); // <-- Add this line for debugging
-            const messageDiv = document.createElement('div');
-            messageDiv.classList.add('message');
-            if (data.sender_username === currentUserUsername) {
-                messageDiv.classList.add('sent');
-            } else {
-                messageDiv.classList.add('received');
-            }
-
-            const p = document.createElement('p');
-            p.classList.add('mb-0');
-            p.textContent = data.message;
-            messageDiv.appendChild(p);
-
-            const small = document.createElement('small');
-            small.classList.add('text-muted');
-            small.title = formatTitle(data.timestamp);
-            small.textContent = formatTime(data.timestamp);
-            messageDiv.appendChild(small);
-
-            chatMessagesContainer.appendChild(messageDiv);
-
-            const clearer = document.createElement('div');
-            clearer.style.clear = 'both';
-            chatMessagesContainer.appendChild(clearer); {# Add a clearing div after each new message #}
-
-            scrollToBottom();
-        };
-
-        chatSocket.onclose = function (e) {
-            console.error('Chat socket closed.');
-            console.error('Close event: ', e);
-            console.error('Code: ', e.code);
-            console.error('Reason: ', e.reason);
-            console.error('wasClean: ', e.wasClean);
-            // You could add logic here to attempt to reconnect or notify the user.
-        };
-
-        messageForm.addEventListener('submit', function (e) {
-            e.preventDefault();
-            const message = messageInput.value;
-            if (message.trim() === '') {
-                return;
-            }
-            chatSocket.send(JSON.stringify({
-                'message': message
-            }));
-            messageInput.value = ''; // Clear input field
+    function formatTitle(isoString) {
+        const date = new Date(isoString);
+        return date.toLocaleString('en-US', { 
+            month: 'short', 
+            day: 'numeric', 
+            year: 'numeric', 
+            hour: 'numeric', 
+            minute: '2-digit' 
         });
+    }
 
-        chatSocket.onerror = function(err) {
-            console.error('WebSocket Error: ', err);
-        };
+    document.querySelectorAll('.message-timestamp').forEach(function(smallElement) {
+        const isoTimestamp = smallElement.dataset.timestamp;
+        if (isoTimestamp) {
+            smallElement.textContent = formatTime(isoTimestamp);
+            smallElement.title = formatTitle(isoTimestamp);
+        }
     });
+    
+    scrollToBottom();
+
+    // --- WebSocket logic that we know works ---
+    const chatSocket = new WebSocket(
+        (window.location.protocol === 'https:' ? 'wss://' : 'ws://') +
+        window.location.host +
+        '/ws/chat/' + sessionId + '/'
+    );
+
+    // This runs when a new message arrives
+    chatSocket.onmessage = function (e) {
+        const data = JSON.parse(e.data);
+        const messageDiv = document.createElement('div');
+        messageDiv.classList.add('message', data.sender_username === currentUserUsername ? 'sent' : 'received');
+
+        const p = document.createElement('p');
+        p.classList.add('mb-0');
+        p.textContent = data.message;
+        messageDiv.appendChild(p);
+
+        const small = document.createElement('small');
+        small.classList.add('text-muted', 'message-timestamp');
+        small.textContent = formatTime(data.timestamp);
+        small.title = formatTitle(data.timestamp);
+        messageDiv.appendChild(small);
+
+        chatMessagesContainer.appendChild(messageDiv);
+        
+        const clearer = document.createElement('div');
+        clearer.style.clear = 'both';
+        chatMessagesContainer.appendChild(clearer);
+
+        scrollToBottom();
+    };
+
+    messageForm.addEventListener('submit', function (e) {
+        e.preventDefault();
+        const message = messageInput.value.trim();
+        if (message === '') return;
+        chatSocket.send(JSON.stringify({ 'message': message }));
+        messageInput.value = '';
+    });
+
+    chatSocket.onopen = function(e) { console.log('Chat socket connected successfully'); };
+    chatSocket.onclose = function (e) { console.error('Chat socket closed.'); };
+    chatSocket.onerror = function(err) { console.error('WebSocket Error: ', err); };
+});
 </script>
 {% endblock script %}

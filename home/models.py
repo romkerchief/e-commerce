@@ -147,8 +147,6 @@ class ShippingAddress(models.Model):
     kota = models.CharField(max_length=255, null=True)
     kode_pos = models.CharField(max_length=10, null=True, blank=True)
     address = models.CharField(max_length=255, null=True)
-    latitude = models.FloatField(null=True, blank=True)
-    longitude = models.FloatField(null=True, blank=True)
     date_added = models.DateTimeField(auto_now_add=True)
     
     def __str__(self):

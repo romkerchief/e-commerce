@@ -1,0 +1,169 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div style="padding-top: 70px;"> 
+    <div class="container mt-4">
+        <h2 class="mb-4">{{ page_title }}</h2>
+        <p>Dashboard analitik yang memberikan gambaran performa bisnis untuk pengambilan keputusan.</p>
+        
+        <div id="dashboard-content" style="display: none;">
+            <div class="row">
+                <div class="col-md-6 mb-4">
+                    <div class="card">
+                        <div class="card-header">
+                            Persentase Penjualan per Kategori
+                        </div>
+                        <div class="card-body">
+                            <canvas id="salesCategoryChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6 mb-4">
+                    <div class="card">
+                        <div class="card-header">
+                            Jumlah Pengguna berdasarkan Role
+                        </div>
+                        <div class="card-body">
+                            <canvas id="userRoleChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-7 mb-4">
+                    <div class="card">
+                        <div class="card-header">
+                            Total Penjualan per Bulan
+                        </div>
+                        <div class="card-body">
+                            <canvas id="monthlySalesChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-5 mb-4">
+                    <div class="card">
+                        <div class="card-header">
+                            5 Produk Terlaris
+                        </div>
+                        <div class="card-body">
+                            <canvas id="topProductsChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="mb-4">
+            <a href="{% url 'customers:export_pimpinan_pdf' %}" class="btn btn-danger">
+                <i class="fas fa-file-pdf"></i> Export to PDF
+            </a>
+            <a href="{% url 'customers:export_pimpinan_xlsx' %}" class="btn btn-success">
+                <i class="fas fa-file-excel"></i> Export to Excel
+            </a>
+        </div>
+    </div>
+</div>
+
+{% endblock content %}
+
+{% block script %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    
+    // Check if the main chart container exists on the page
+    const dashboardContent = document.getElementById('dashboard-content');
+    if (!dashboardContent) {
+        console.error("Dashboard content area not found. Aborting script.");
+        return; // Stop the script if the main container isn't there
+    }
+
+    console.log("DOM is ready. Fetching chart data...");
+
+    fetch("{% url 'customers:pimpinan_dashboard' %}", {
+        method: 'GET',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+        },
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Network response was not ok: ' + response.statusText);
+        }
+        return response.json();
+    })
+    .then(data => {
+        console.log("Data received from server:", data);
+
+        // Show the chart content area
+        dashboardContent.style.display = 'block';
+
+        // --- Render Charts ---
+
+        // 1. Sales per Category (Pie Chart)
+        new Chart(document.getElementById('salesCategoryChart'), {
+            type: 'pie',
+            data: {
+                labels: data.sales_per_category.labels,
+                datasets: [{
+                    label: 'Items Sold',
+                    data: data.sales_per_category.data,
+                    backgroundColor: ['#0d6efd', '#6c757d', '#198754', '#dc3545', '#ffc107'],
+                }]
+            },
+        });
+
+        // 2. User Roles (Doughnut Chart)
+        new Chart(document.getElementById('userRoleChart'), {
+            type: 'doughnut',
+            data: {
+                labels: data.user_roles.labels,
+                datasets: [{
+                    label: 'User Count',
+                    data: data.user_roles.data,
+                    backgroundColor: ['#0d6efd', '#6c757d', '#198754', '#dc3545', '#ffc107'],
+                }]
+            },
+        });
+
+        // 3. Monthly Sales (Line Chart)
+        new Chart(document.getElementById('monthlySalesChart'), {
+            type: 'line',
+            data: {
+                labels: data.monthly_sales.labels,
+                datasets: [{
+                    label: 'Total Items Sold per Month',
+                    data: data.monthly_sales.data,
+                    borderColor: '#0d6efd',
+                    fill: false,
+                    tension: 0.1
+                }]
+            },
+            options: { scales: { y: { beginAtZero: true } } }
+        });
+
+        // 4. Top Products (Bar Chart)
+        new Chart(document.getElementById('topProductsChart'), {
+            type: 'bar',
+            data: {
+                labels: data.top_products.labels,
+                datasets: [{
+                    label: 'Quantity Sold',
+                    data: data.top_products.data,
+                    backgroundColor: '#198754',
+                }]
+            },
+            options: { scales: { y: { beginAtZero: true } } }
+        });
+
+    })
+    .catch(error => {
+        console.error('Error fetching or processing dashboard data:', error);
+        dashboardContent.innerHTML = '<div class="alert alert-danger">Failed to load statistical data. Please check the console for more details.</div>';
+        dashboardContent.style.display = 'block';
+    });
+});
+</script>
+{% endblock script %}

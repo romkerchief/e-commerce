@@ -24,16 +24,21 @@ class ProfileAdmin(admin.ModelAdmin):
 
     # Define a new User admin
 class UserAdmin(BaseUserAdmin):
-        inlines = (ProfileInline,)
-        # to list_display or list_filter if you want to see/filter by these in the User list view
-        # list_display = ('username', 'email', 'first_name', 'last_name', 'is_staff', 'profile__user_level', 'profile__valid_status')
-        # list_filter = ('is_staff', 'is_superuser', 'is_active', 'profile__user_level', 'profile__valid_status')
-    # Re-register UserAdmin
+    inlines = (ProfileInline,)
+    
+    # This method is the key. It prevents the inline form from being displayed
+    # on the "add" page, thus stopping the duplicate creation attempt.
+    def get_inline_instances(self, request, obj=None):
+        # Return no inlines when creating a new user (obj is None)
+        if not obj:
+            return list()
+        # Otherwise, return the inlines as usual for the change page
+        return super().get_inline_instances(request, obj)
+
 admin.site.unregister(User)
 admin.site.register(User, UserAdmin)
 
 # Register your models here.
-admin.site.register(Profile, ProfileAdmin) # Register Profile with its own admin and the SellerProfile inline
 admin.site.register(Division)
 admin.site.register(UserLevel)
 admin.site.register(ValidStatus)

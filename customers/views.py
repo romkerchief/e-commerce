@@ -4,7 +4,7 @@ from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.core.mail import EmailMessage, send_mail
 from django.conf import settings
-from django.template.loader import render_to_string
+from django.template.loader import render_to_string, get_template
 from django.contrib.auth.models import User
 from django.contrib import messages
 from django.contrib.auth import logout, login, authenticate
@@ -13,13 +13,18 @@ from django.views import generic
 from django.views.decorators.csrf import csrf_protect
 from django.utils import timezone
 from django.db import transaction
+from django.db.models import Count, Sum, F
+from django.db.models.functions import TruncMonth
 import secrets
 from functools import wraps
 import smtplib
 from .models import Profile, UserLevel, ValidStatus, SellerProfile, Division # type: ignore
 from .forms import FormSignUp,FormLogIn, ProfileUpdateForm, SellerSignUpForm, SellerProfileUpdateForm, StaffSignUpForm, OrderStatusUpdateForm # type: ignore
-from home.models import Product, OrderStatus 
+from home.models import Product, OrderStatus, Category, Order, OrderItem
 from .forms import StaffUserBaseForm, StaffProfileEditForm
+from xhtml2pdf import pisa #type: ignore
+import openpyxl #type: ignore
+from openpyxl.writer.excel import save_virtual_workbook #type: ignore
 
 # --- Decorators for Permission Checks ---
 
@@ -67,6 +72,35 @@ def staff_member_required(function):
         else:
             messages.error(request, "You do not have permission to access this page.")
             return redirect('homey:index') # Redirect non-staff to homepage
+    return wrap
+
+def pimpinan_required(function):
+    """
+    Decorator to restrict access to views to Superusers or users in the "Pimpinan" division.
+    """
+    @wraps(function)
+    def wrap(request, *args, **kwargs):
+        if not request.user.is_authenticated or not request.user.is_staff:
+            messages.error(request, "You must be logged in as staff to access this page.")
+            return redirect('customers:customer_login')
+
+        if request.user.is_superuser:
+            return function(request, *args, **kwargs)
+        
+        try:
+            profile = request.user.profile
+            # Check if the user is in the 'Pimpinan' division
+            if profile.division and profile.division.name == "Pimpinan":
+                return function(request, *args, **kwargs)
+            else:
+                messages.error(request, "You do not have permission to access the leadership dashboard.")
+                return redirect('customers:staff_dashboard') # Redirect to the regular staff dashboard
+        except Profile.DoesNotExist:
+            messages.error(request, "User profile not found.")
+            return redirect('customers:staff_dashboard')
+        except AttributeError:
+            messages.error(request, "User profile is incomplete (division not set).")
+            return redirect('customers:staff_dashboard')
     return wrap
 
 # --- Authentication and Profile Management Views ---
@@ -723,7 +757,7 @@ def customer_order_detail_view(request, order_transaction_id):
         messages.error(request, "An error occurred while fetching order details.")
         print(f"Error in customer_order_detail_view: {str(e)}")
         return redirect('customers:customer_order_history')
-
+ 
 @login_required
 @staff_member_required
 def staff_user_list_view(request):
@@ -893,3 +927,139 @@ def staff_product_delete_view(request, pk):
         'page_title': f"Confirm Delete: {product.name}"
     }
     return render(request, 'staff/product_confirm_delete.html', context)
+
+@login_required
+@pimpinan_required
+def pimpinan_dashboard_view(request):
+    """
+    Dashboard view for Pimpinan, showing key business analytics.
+    This view can serve both the initial page and the API endpoint for chart data.
+    """
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        
+        # 1. PIE CHART: Penjualan per Kategori
+        sales_per_category = OrderItem.objects.values('product__category__name').annotate(
+            total_quantity_sold=Sum('quantity')
+        ).order_by('-total_quantity_sold')
+
+        pie_chart_data = {
+            "labels": [item['product__category__name'] for item in sales_per_category],
+            "data": [item['total_quantity_sold'] for item in sales_per_category],
+        }
+
+        # 2. PIE CHART: Jumlah Pengguna per Role
+        users_per_level = Profile.objects.values('user_level__name').annotate(
+            user_count=Count('id')
+        ).order_by('-user_count')
+
+        user_role_data = {
+            "labels": [item['user_level__name'] for item in users_per_level if item['user_level__name']],
+            "data": [item['user_count'] for item in users_per_level if item['user_level__name']],
+        }
+
+        # 3. LINE CHART: Penjualan per Bulan
+        sales_per_month = OrderItem.objects.annotate(
+            month=TruncMonth('order__date_order')
+        ).values('month').annotate(
+            total_monthly_quantity=Sum('quantity')
+        ).order_by('month')
+        
+        line_chart_data = {
+            "labels": [item['month'].strftime('%B %Y') for item in sales_per_month],
+            "data": [item['total_monthly_quantity'] for item in sales_per_month],
+        }
+
+        # 4. BAR CHART: Produk Terlaris
+        best_selling_products = OrderItem.objects.values('product__name').annotate(
+            total_sold=Sum('quantity')
+        ).order_by('-total_sold')[:5]
+
+        bar_chart_data = {
+            "labels": [item['product__name'] for item in best_selling_products],
+            "data": [item['total_sold'] for item in best_selling_products],
+        }
+
+        # Combine all data into a single response
+        all_chart_data = {
+            'sales_per_category': pie_chart_data,
+            'user_roles': user_role_data,
+            'monthly_sales': line_chart_data,
+            'top_products': bar_chart_data,
+        }
+        return JsonResponse(all_chart_data)
+
+    context = { 'page_title': "Dashboard Pimpinan" }
+    return render(request, 'staff/pimpinan_dashboard.html', context)
+
+@login_required
+@pimpinan_required
+def export_pimpinan_dashboard_pdf(request):
+    # 1. Get the same data as the dashboard view
+    # Sales by Category
+    sales_data = OrderItem.objects.values('product__category__name').annotate(total_quantity_sold=Sum('quantity')).order_by('-total_quantity_sold')
+    sales_per_category = [{'labels': item['product__category__name'], 'data': item['total_quantity_sold']} for item in sales_data]
+
+    # Monthly Sales
+    monthly_data = OrderItem.objects.annotate(month=TruncMonth('order__date_order')).values('month').annotate(total_monthly_quantity=Sum('quantity')).order_by('month')
+    monthly_sales = [{'labels': item['month'].strftime('%B %Y'), 'data': item['total_monthly_quantity']} for item in monthly_data]
+
+    # Top Products
+    top_data = OrderItem.objects.values('product__name').annotate(total_sold=Sum('quantity')).order_by('-total_sold')[:5]
+    top_products = [{'labels': item['product__name'], 'data': item['total_sold']} for item in top_data]
+
+    context = {
+        'sales_per_category': sales_per_category,
+        'monthly_sales': monthly_sales,
+        'top_products': top_products,
+    }
+
+    # 2. Render HTML template
+    template = get_template('staff/pimpinan_dashboard_report.html')
+    html = template.render(context)
+
+    # 3. Create a PDF
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = 'attachment; filename="pimpinan_report.pdf"'
+    
+    pisa_status = pisa.CreatePDF(html, dest=response)
+    if pisa_status.err:
+        return HttpResponse('We had some errors <pre>' + html + '</pre>')
+    return response
+
+@login_required
+@pimpinan_required
+def export_pimpinan_dashboard_xlsx(request):
+    # 1. Get the data again
+    sales_data = OrderItem.objects.values('product__category__name').annotate(total_quantity_sold=Sum('quantity')).order_by('-total_quantity_sold')
+    monthly_data = OrderItem.objects.annotate(month=TruncMonth('order__date_order')).values('month').annotate(total_monthly_quantity=Sum('quantity')).order_by('month')
+    top_data = OrderItem.objects.values('product__name').annotate(total_sold=Sum('quantity')).order_by('-total_sold')[:5]
+
+    # 2. Create an Excel workbook and sheets
+    workbook = openpyxl.Workbook()
+    
+    # Sheet 1: Sales by Category
+    sheet1 = workbook.active
+    sheet1.title = "Sales by Category"
+    sheet1.append(['Category', 'Items Sold'])
+    for item in sales_data:
+        sheet1.append([item['product__category__name'], item['total_quantity_sold']])
+        
+    # Sheet 2: Monthly Sales
+    sheet2 = workbook.create_sheet(title="Monthly Sales")
+    sheet2.append(['Month', 'Total Items Sold'])
+    for item in monthly_data:
+        sheet2.append([item['month'].strftime('%B %Y'), item['total_monthly_quantity']])
+
+    # Sheet 3: Top Products
+    sheet3 = workbook.create_sheet(title="Top Products")
+    sheet3.append(['Product', 'Quantity Sold'])
+    for item in top_data:
+        sheet3.append([item['product__name'], item['total_sold']])
+
+    # 3. Create the response
+    response = HttpResponse(
+        content=save_virtual_workbook(workbook),
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = 'attachment; filename="pimpinan_report.xlsx"'
+    return response

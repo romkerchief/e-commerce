@@ -5,16 +5,17 @@ from django.conf.urls.static import static
 from .views import (
     registerPage, seller_register_page, loginPage, logoutPage,
     verify_email, resend_verification, edit_profile, view_profile, customer_order_history_view, customer_order_detail_view, staff_register_view, staff_dashboard_view, staff_all_orders_view, staff_order_detail_view, staff_user_list_view, staff_user_detail_view, staff_user_orders_view, staff_user_edit_view, staff_product_list_view, staff_product_delete_view,
-    seller_dashboard_view, seller_order_detail_view
+    seller_dashboard_view, seller_order_detail_view,
+    pimpinan_dashboard_view, export_pimpinan_dashboard_pdf, export_pimpinan_dashboard_xlsx
 )
 
 app_name = 'customers' # Add this line
 
 urlpatterns = [
-	path('register/',registerPage,name='register'),
-	path('seller/register/', seller_register_page, name='seller_register'),
-	path('login/',loginPage,name='customer_login'),
-	path('logout/',logoutPage,name='logout'),
+    path('register/',registerPage,name='register'),
+    path('seller/register/', seller_register_page, name='seller_register'),
+    path('login/',loginPage,name='customer_login'),
+    path('logout/',logoutPage,name='logout'),
     path('verify-email/', verify_email, name='verify_email'),
     path('resend-verification/', resend_verification, name='resend_verification'),
     path('profile/edit/', edit_profile, name='edit_profile'),
@@ -30,10 +31,13 @@ urlpatterns = [
     path('staff/users/<int:pk>/', staff_user_detail_view, name='staff_user_detail'),
     path('staff/product/<int:pk>/delete/', staff_product_delete_view, name='staff_product_delete'),
     path('staff/products/', staff_product_list_view, name='staff_product_list'),
-    path('staff/users/<int:user_id>/orders/', staff_user_orders_view, name='staff_user_orders'), # This pattern needs the view imported
+    path('staff/users/<int:user_id>/orders/', staff_user_orders_view, name='staff_user_orders'),
     path('staff/users/<int:pk>/edit/', staff_user_edit_view, name='staff_user_edit'),
-    path('staff/users/', staff_user_list_view, name='staff_user_list'), # This pattern needs the view imported
-
+    path('staff/users/', staff_user_list_view, name='staff_user_list'),
+    path('pimpinan/dashboard/', pimpinan_dashboard_view, name='pimpinan_dashboard'),
+    path('pimpinan/dashboard/export/pdf/', export_pimpinan_dashboard_pdf, name='export_pimpinan_pdf'),
+    path('pimpinan/dashboard/export/xlsx/', export_pimpinan_dashboard_xlsx, name='export_pimpinan_xlsx'),
+    
     # Password Reset URLs
     path('password_reset/',
          auth_views.PasswordResetView.as_view(template_name='registration/password_reset_form.html'),
