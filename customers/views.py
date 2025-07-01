@@ -19,9 +19,8 @@ import secrets
 from functools import wraps
 import smtplib
 from .models import Profile, UserLevel, ValidStatus, SellerProfile, Division # type: ignore
-from .forms import FormSignUp,FormLogIn, ProfileUpdateForm, SellerSignUpForm, SellerProfileUpdateForm, StaffSignUpForm, OrderStatusUpdateForm # type: ignore
+from .forms import FormSignUp,FormLogIn, ProfileUpdateForm, SellerSignUpForm, SellerProfileUpdateForm, StaffSignUpForm, OrderStatusUpdateForm, StaffUserBaseForm, StaffProfileEditForm # type: ignore
 from home.models import Product, OrderStatus, Category, Order, OrderItem
-from .forms import StaffUserBaseForm, StaffProfileEditForm
 from xhtml2pdf import pisa #type: ignore
 import openpyxl #type: ignore
 from openpyxl.writer.excel import save_virtual_workbook #type: ignore
@@ -102,6 +101,7 @@ def pimpinan_required(function):
             messages.error(request, "User profile is incomplete (division not set).")
             return redirect('customers:staff_dashboard')
     return wrap
+    
 
 # --- Authentication and Profile Management Views ---
 
@@ -261,46 +261,40 @@ def seller_register_page(request):
     context = {'form': form}
     return render(request, 'registration/seller_register.html', context)
 
-
 def loginPage(request):
-    #print(f"DEBUG: loginPage view called. Request method: {request.method}")
-    """
-    Handles user login. Authenticates the user and redirects based on their user level
-    (staff, seller, or regular user) after checking email verification.
-    """
     form = FormLogIn()
     if request.method == 'POST':
-        # Get username and password from the POST request
         username = request.POST.get('username')
         password = request.POST.get('password')
         user = authenticate(request, username=username, password=password)
         
-        #print(f"DEBUG: Attempting login for user: {username}") # Check if this prints
-
         if user is not None:
-            #print(f"DEBUG: User '{username}' authenticated successfully.") # Check if this prints
-            # The signal should create the profile
-            if not hasattr(user, 'profile') or not user.profile.email_verified:
-                #print(f"DEBUG: User '{username}' email not verified or profile missing. Redirecting to verify_email.") # Check if this prints
-                messages.warning(request, 'Please verify your email first')
-                return redirect('customers:verify_email')
+            # First, check if the user is a staff member
+            if user.is_staff:
+                # If they are staff, perform the status check
+                if hasattr(user, 'profile') and user.profile.valid_status:
+                    status_name = user.profile.valid_status.name
+                    if status_name != 'Valid': # Block if status is anything other than "Valid"
+                        messages.error(request, f'This account is not active ({status_name}). Please contact HR.')
+                        return render(request, 'registration/login.html', {'form': form})
+                else: # Failsafe for misconfigured staff accounts
+                    messages.error(request, "Your staff account is not configured correctly. Please contact support.")
+                    return render(request, 'registration/login.html', {'form': form})
             
+            # If we get here, the user is either not staff, or is a staff member with "Valid" status.
+            # It is now safe to log them in.
             login(request, user)
-            if user.is_staff: # check if user is staff first
-                messages.success(request, f"Welcome Staff Member, {user.username}!")
+
+            # Your redirect logic remains the same
+            if user.is_staff:
                 return redirect('customers:staff_dashboard')
             elif hasattr(user, 'profile') and user.profile.user_level and user.profile.user_level.name == "Penjual":
-                messages.success(request, f"Welcome back, Seller {user.username}!")
                 return redirect('customers:seller_dashboard')
             else:
-                messages.success(request, f"Welcome back, {user.username}!")
                 return redirect('homey:index')
         else:
-            #print(f"DEBUG: Authentication failed for user: {username}")
-            # Get username and password from the POST request
             messages.error(request, 'Invalid credentials')
     
-    # Render the login page with the form
     context = {'form':form}
     return render(request,'registration/login.html', context)
 

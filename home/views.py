@@ -7,10 +7,10 @@ from django.contrib.auth.models import Group
 import json
 import requests #type: ignore
 from .utils import *
-from django.db.models import Sum, Count
+from django.db.models import Sum, Count, Avg
 from django.db.models.functions import TruncMonth
 from django.contrib import messages
-from .forms import ProductForm, ProductImage, ProductImageForm, FormShipping
+from .forms import ProductForm, ProductImage, ProductImageForm, FormShipping, ReviewForm
 from customers.models import SellerProfile
 from customers.views import seller_required
 from django.forms import inlineformset_factory # Import inlineformset_factory
@@ -21,6 +21,7 @@ from django.views.generic import (
     UpdateView,
     ListView,
 )
+from django.urls import reverse_lazy
 
 
 class HomeView(ListView):
@@ -47,51 +48,121 @@ class HomeView(ListView):
                     ordering = [request["more-filter"]]
                     return ordering
 
-    def get_context_data(self,*args,**kwargs):
-        # fakeStoreAPI()
+    def get_context_data(self, *args, **kwargs):
+        context = super().get_context_data(*args, **kwargs)
+        
         request = self.request
-        context = super().get_context_data()
-        # print("bum",context,"bum") 
         self.kwargs.update(self.extra_context)
-        kwargs = self.kwargs
-        for product in context["product_list"]:
-            product_images = ProductImage.objects.filter(product=product.pk)
-            print(product_images)
         if len(request.GET) != 0:
             if next(iter(request.GET)) == 'category-id':
                 context['active'] = Category.objects.get(id=request.GET['category-id'])
-        context.update(cartData(self.request))
-        if context['items'] != "0":
-            context.update(mergeFunction(request,context['items']))
-        return context
-
-class ProductDetail(TemplateView):
-    model = Product
-    def get_context_data(self,**kwargs):
-        context = super().get_context_data()
-        # Use product_slug from URL kwargs, category_slug is also available in kwargs if needed for filtering
-        # Assuming product slugs are unique, category_slug might be for URL structure/SEO
-        context['product'] = self.model.objects.get(slug=kwargs['product_slug'])
-        product_obj = context['product']
-
-        # Prepare images for the carousel
-        carousel_image_urls = []
-        if product_obj.main_image:
-            carousel_image_urls.append(product_obj.main_image.url)
         
-        # Add images from ProductImage, excluding any that might be duplicates of main_image if logic was more complex
-        additional_images = ProductImage.objects.filter(product=product_obj.pk)
-        for img_instance in additional_images:
-            if img_instance.imageURL not in carousel_image_urls: # Avoid duplicates if main_image was also a ProductImage
-                 carousel_image_urls.append(img_instance.imageURL)
+        # This part handles the cart display in the navbar
+        # context.update(cartData(self.request))
 
-        context["carousel_image_urls"] = carousel_image_urls
-        exclude_object = Product.objects.exclude(slug=kwargs['product_slug'])
-        paginator = Paginator(exclude_object,4)
-        prod_list = paginator.get_page(None)
-        context['product_list']=prod_list
+        if self.template_name == 'home/indexhome.html':
+            top_rated_products = Product.objects.annotate(
+                average_rating=Avg('reviews__rating')
+            ).filter(reviews__isnull=False).order_by('-average_rating')[:4] # Get top 4
+            
+            context['top_rated_list'] = top_rated_products
+        
         return context
- 
+
+class ProductDetail(DetailView):
+    model = Product
+    template_name = 'home/detail.html'
+    slug_url_kwarg = 'product_slug'
+
+    def get_context_data(self, **kwargs):
+        """
+        This method prepares all the data needed to DISPLAY the page (GET request).
+        """
+        context = super().get_context_data(**kwargs)
+        product = self.get_object()
+        
+        # Get reviews and calculate average rating
+        reviews = product.reviews.all().order_by('-created_at')
+        context['reviews'] = reviews
+        context['review_form'] = ReviewForm()
+        aggregation = reviews.aggregate(
+            average_rating=Avg('rating'), 
+            review_count=Count('id')
+        )
+        context['average_rating'] = aggregation.get('average_rating') or 0
+        context['review_count'] = aggregation.get('review_count') or 0
+
+        # Your existing code for the image carousel
+        carousel_image_urls = []
+        if product.main_image:
+            carousel_image_urls.append(product.main_image.url)
+        additional_images = ProductImage.objects.filter(product=product)
+        for img_instance in additional_images:
+            if img_instance.imageURL not in carousel_image_urls:
+                carousel_image_urls.append(img_instance.imageURL)
+        context["carousel_image_urls"] = carousel_image_urls
+        
+        return context
+
+    def post(self, request, *args, **kwargs):
+        """
+        This method handles the form submission for new reviews (POST request).
+        """
+        if not request.user.is_authenticated:
+            messages.error(request, "You must be logged in to post a review.")
+            return redirect('customers:customer_login')
+
+        product = self.get_object()
+        form = ReviewForm(request.POST)
+
+        # Restriction logic for seller
+        if product.seller == request.user:
+            messages.error(request, "You cannot review your own product.")
+            return redirect('homey:product_detail', category_slug=product.category.slug, product_slug=product.slug)
+
+        if form.is_valid():
+            # Check if user has already reviewed this product
+            if Review.objects.filter(product=product, user=request.user).exists():
+                messages.error(request, "You have already submitted a review for this product.")
+            else:
+                review = form.save(commit=False)
+                review.product = product
+                review.user = request.user
+                review.save()
+                messages.success(request, "Thank you! Your review has been submitted.")
+        else:
+            messages.error(request, "There was an error with your submission. Please check the rating and comment fields.")
+
+        # Redirect back to the same product page to see the new review
+        return redirect('homey:product_detail', category_slug=product.category.slug, product_slug=product.slug)
+    
+def post(self, request, *args, **kwargs):
+    # This method handles the form submission for new reviews
+    if not request.user.is_authenticated:
+        return redirect('customers:customer_login')
+
+    product = self.get_object()
+    form = ReviewForm(request.POST)
+
+    # restriction logic
+    if product.seller == request.user:
+        messages.error(request, "You cannot review your own product.")
+        return redirect('homey:product_detail', category_slug=product.category.slug, product_slug=product.slug)
+
+    if form.is_valid():
+        if Review.objects.filter(product=product, user=request.user).exists():
+            messages.error(request, "You have already reviewed this product.")
+        else:
+            review = form.save(commit=False)
+            review.product = product
+            review.user = request.user
+            review.save()
+            messages.success(request, "Thank you! Your review has been submitted.")
+    else:
+        messages.error(request, "There was an error with your submission. Please check your rating and comment.")
+
+    return redirect('homey:product_detail', category_slug=product.category.slug, product_slug=product.slug)
+
 def fakeStoreAPI():
     # This function will store data from api to django.
     responses=requests.get('https://fakestoreapi.com/products?limit=5').json()

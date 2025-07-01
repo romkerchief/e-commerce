@@ -1,5 +1,5 @@
 from django import forms
-from .models import Product, ProductImage, ShippingAddress
+from .models import Product, ProductImage, ShippingAddress, Review
 
 class ProductForm(forms.ModelForm):
     class Meta:
@@ -43,4 +43,14 @@ class FormShipping(forms.ModelForm):
         }
         labels = {
             'kode_pos': 'Postal Code'
+        }
+
+class ReviewForm(forms.ModelForm):
+    class Meta:
+        model = Review
+        # Only show these fields to the user
+        fields = ['rating', 'comment']
+        widgets = {
+            'rating': forms.Select(attrs={'class': 'form-control'}),
+            'comment': forms.Textarea(attrs={'class': 'form-control', 'rows': 4}),
         }
