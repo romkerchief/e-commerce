@@ -160,7 +160,7 @@
     </div>
   </div>
 
-	<div class="container bg-light mt-2">
+	<!-- <div class="container bg-light mt-2">
 		<h2 class="d-flex mx-auto"><a href="/product/" class="link-href mb-4 text-decoration-none title-a1">Produk Lain</a></h2>
 		<div class="row px-2">
 		{% for produk in product_list %}
@@ -183,7 +183,7 @@
                   {% else %}
                   <span class="btn-overlay disabled"><i class="fa fa-search-plus"></i> Quick view</span>
                   {% endif %}
-                </div> <!-- img-wrap.// -->
+                </div>
                 <figcaption class="info-wrap text-center ">
                   <div class="fix-height">
                     {% if produk.category and produk.category.slug and produk.slug %}
@@ -198,14 +198,14 @@
                     {% endif %}
                     <div class="price-wrap mt-2">
                       <span class="price price-product pt-2">Rp {{produk.price|floatformat:2|intcomma}}</span>
-                    </div> <!-- price-wrap.// -->
+                    </div>
                   </div>
                 </figcaption>
               </figure>
-            </div> <!-- col.// -->
+            </div>
     {% endfor %}
 		</div>
-	</div>
+	</div> -->
 </section>
 {% endblock content %}
 {% block script %}

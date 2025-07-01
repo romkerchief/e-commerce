@@ -14,7 +14,7 @@ from django.views.decorators.csrf import csrf_protect
 from django.utils import timezone
 from django.db import transaction
 from django.db.models import Count, Sum, F
-from django.db.models.functions import TruncMonth
+from django.db.models.functions import TruncMonth, TruncWeek
 import secrets
 from functools import wraps
 import smtplib
@@ -951,16 +951,16 @@ def pimpinan_dashboard_view(request):
             "data": [item['user_count'] for item in users_per_level if item['user_level__name']],
         }
 
-        # 3. LINE CHART: Penjualan per Bulan
-        sales_per_month = OrderItem.objects.annotate(
-            month=TruncMonth('order__date_order')
-        ).values('month').annotate(
-            total_monthly_quantity=Sum('quantity')
-        ).order_by('month')
+        # 3. LINE CHART: Penjualan per Minggu
+        sales_per_week = OrderItem.objects.annotate(
+            week=TruncWeek('order__date_order')
+        ).values('week').annotate(
+            total_weekly_quantity=Sum('quantity')
+        ).order_by('week')
         
         line_chart_data = {
-            "labels": [item['month'].strftime('%B %Y') for item in sales_per_month],
-            "data": [item['total_monthly_quantity'] for item in sales_per_month],
+            "labels": [item['week'].strftime('%Y - Week %W') for item in sales_per_week],
+            "data": [item['total_weekly_quantity'] for item in sales_per_week],
         }
 
         # 4. BAR CHART: Produk Terlaris
@@ -977,7 +977,7 @@ def pimpinan_dashboard_view(request):
         all_chart_data = {
             'sales_per_category': pie_chart_data,
             'user_roles': user_role_data,
-            'monthly_sales': line_chart_data,
+            'weekly_sales': line_chart_data,
             'top_products': bar_chart_data,
         }
         return JsonResponse(all_chart_data)
@@ -993,9 +993,9 @@ def export_pimpinan_dashboard_pdf(request):
     sales_data = OrderItem.objects.values('product__category__name').annotate(total_quantity_sold=Sum('quantity')).order_by('-total_quantity_sold')
     sales_per_category = [{'labels': item['product__category__name'], 'data': item['total_quantity_sold']} for item in sales_data]
 
-    # Monthly Sales
-    monthly_data = OrderItem.objects.annotate(month=TruncMonth('order__date_order')).values('month').annotate(total_monthly_quantity=Sum('quantity')).order_by('month')
-    monthly_sales = [{'labels': item['month'].strftime('%B %Y'), 'data': item['total_monthly_quantity']} for item in monthly_data]
+    # Weekly Sales
+    weekly_data = OrderItem.objects.annotate(week=TruncWeek('order__date_order')).values('week').annotate(total_weekly_quantity=Sum('quantity')).order_by('week')
+    weekly_sales = [{'labels': item['week'].strftime('%Y - Week %W'), 'data': item['total_weekly_quantity']} for item in weekly_data]
 
     # Top Products
     top_data = OrderItem.objects.values('product__name').annotate(total_sold=Sum('quantity')).order_by('-total_sold')[:5]
@@ -1003,8 +1003,9 @@ def export_pimpinan_dashboard_pdf(request):
 
     context = {
         'sales_per_category': sales_per_category,
-        'monthly_sales': monthly_sales,
+        'weekly_sales': weekly_sales,
         'top_products': top_products,
+        'report_type': 'Weekly',
     }
 
     # 2. Render HTML template
@@ -1025,7 +1026,7 @@ def export_pimpinan_dashboard_pdf(request):
 def export_pimpinan_dashboard_xlsx(request):
     # 1. Get the data again
     sales_data = OrderItem.objects.values('product__category__name').annotate(total_quantity_sold=Sum('quantity')).order_by('-total_quantity_sold')
-    monthly_data = OrderItem.objects.annotate(month=TruncMonth('order__date_order')).values('month').annotate(total_monthly_quantity=Sum('quantity')).order_by('month')
+    weekly_data = OrderItem.objects.annotate(week=TruncWeek('order__date_order')).values('week').annotate(total_weekly_quantity=Sum('quantity')).order_by('week')
     top_data = OrderItem.objects.values('product__name').annotate(total_sold=Sum('quantity')).order_by('-total_sold')[:5]
 
     # 2. Create an Excel workbook and sheets
@@ -1038,11 +1039,11 @@ def export_pimpinan_dashboard_xlsx(request):
     for item in sales_data:
         sheet1.append([item['product__category__name'], item['total_quantity_sold']])
         
-    # Sheet 2: Monthly Sales
-    sheet2 = workbook.create_sheet(title="Monthly Sales")
-    sheet2.append(['Month', 'Total Items Sold'])
-    for item in monthly_data:
-        sheet2.append([item['month'].strftime('%B %Y'), item['total_monthly_quantity']])
+    # Sheet 2: Weekly Sales
+    sheet2 = workbook.create_sheet(title="Weekly Sales")
+    sheet2.append(['Week (Starting)', 'Total Items Sold'])
+    for item in weekly_data:
+        sheet2.append([item['week'].strftime('%Y-%m-%d'), item['total_weekly_quantity']])
 
     # Sheet 3: Top Products
     sheet3 = workbook.create_sheet(title="Top Products")

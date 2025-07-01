@@ -8,7 +8,7 @@ import json
 import requests #type: ignore
 from .utils import *
 from django.db.models import Sum, Count, Avg
-from django.db.models.functions import TruncMonth
+from django.db.models.functions import TruncMonth, TruncWeek
 from django.contrib import messages
 from .forms import ProductForm, ProductImage, ProductImageForm, FormShipping, ReviewForm
 from customers.models import SellerProfile
@@ -92,7 +92,6 @@ class ProductDetail(DetailView):
         context['average_rating'] = aggregation.get('average_rating') or 0
         context['review_count'] = aggregation.get('review_count') or 0
 
-        # Your existing code for the image carousel
         carousel_image_urls = []
         if product.main_image:
             carousel_image_urls.append(product.main_image.url)
@@ -101,6 +100,15 @@ class ProductDetail(DetailView):
             if img_instance.imageURL not in carousel_image_urls:
                 carousel_image_urls.append(img_instance.imageURL)
         context["carousel_image_urls"] = carousel_image_urls
+
+        # Get other products from the same category to display in the "Produk Lain" section.
+        # We exclude the current product (pk=product.pk) from the list.
+        # We limit it to the first 4 results.
+        # context['product_list'] = Product.objects.filter(
+        #     category=product.category
+        # ).exclude(
+        #     pk=product.pk
+        # )[:4]
         
         return context
 
@@ -216,11 +224,11 @@ def dashboard_statistik(request):
         .order_by('-total_sales')
 
     # Data for Line Chart: Sales per month
-    sales_per_month = Order.objects.filter(complete=True)\
-        .annotate(month=TruncMonth('date_ordered'))\
-        .values('month')\
+    sales_per_week = Order.objects.filter(complete=True)\
+        .annotate(week=TruncWeek('date_ordered'))\
+        .values('week')\
         .annotate(total_sales=Sum('get_cart_totals'))\
-        .order_by('month')
+        .order_by('week')
 
     # Data for Bar Chart: Top 5 Best-Selling Products
     top_products = OrderItem.objects.filter(order__complete=True)\
@@ -231,8 +239,8 @@ def dashboard_statistik(request):
     context = {
         'pie_chart_labels': json.dumps([item['product__category__name'] for item in category_sales]),
         'pie_chart_data': json.dumps([float(item['total_sales']) for item in category_sales]),
-        'line_chart_labels': json.dumps([s['month'].strftime('%B %Y') for s in sales_per_month]),
-        'line_chart_data': json.dumps([float(s['total_sales']) for s in sales_per_month]),
+        'line_chart_labels': json.dumps([s['week'].strftime('%Y - Week %W') for s in sales_per_week]),
+        'line_chart_data': json.dumps([float(s['total_sales']) for s in sales_per_week]),
         'bar_chart_labels': json.dumps([p['product__name'] for p in top_products]),
         'bar_chart_data': json.dumps([p['total_quantity'] for p in top_products]),
     }

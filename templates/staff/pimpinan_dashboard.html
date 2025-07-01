@@ -35,10 +35,10 @@
                 <div class="col-md-7 mb-4">
                     <div class="card">
                         <div class="card-header">
-                            Total Penjualan per Bulan
+                            Total Penjualan per Minggu
                         </div>
                         <div class="card-body">
-                            <canvas id="monthlySalesChart"></canvas>
+                            <canvas id="weeklySalesChart"></canvas>
                         </div>
                     </div>
                 </div>
@@ -128,14 +128,14 @@ document.addEventListener('DOMContentLoaded', function() {
             },
         });
 
-        // 3. Monthly Sales (Line Chart)
-        new Chart(document.getElementById('monthlySalesChart'), {
+        // 3. Weekly Sales (Line Chart)
+        new Chart(document.getElementById('weeklySalesChart'), {
             type: 'line',
             data: {
-                labels: data.monthly_sales.labels,
+                labels: data.weekly_sales.labels,
                 datasets: [{
-                    label: 'Total Items Sold per Month',
-                    data: data.monthly_sales.data,
+                    label: 'Total Items Sold per Week',
+                    data: data.weekly_sales.data,
                     borderColor: '#0d6efd',
                     fill: false,
                     tension: 0.1
